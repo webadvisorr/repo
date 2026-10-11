@@ -229,6 +229,11 @@ final class AuthController extends Controller
             'vehicleCount'  => $vehicleCount,
             'documentCount' => $documentCount,
             'upcoming'      => $upcoming,
+            'credit'        => $orgId ? \App\Services\CreditService::balance((int) $orgId) : 0.0,
+            'ledger'        => $orgId ? \App\Services\CreditService::history((int) $orgId, 10) : [],
+            'subscription'  => $orgId ? \App\Services\SubscriptionService::current((int) $orgId) : null,
+            'limits'        => $orgId ? \App\Services\SubscriptionService::limits((int) $orgId) : [],
+            'currency'      => (string) Settings::get('payment.currency', 'TRY'),
         ]);
     }
 }

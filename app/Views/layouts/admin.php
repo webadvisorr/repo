@@ -5,16 +5,18 @@ use App\Core\Translator;
 $user = Auth::user();
 $current = current_path();
 $items = [
-    ['/yonetim/', '📊', t('admin.dashboard')],
-    ['/yonetim/ayarlar', '⚙️', t('admin.site_identity')],
-    ['/yonetim/uyeler', '👥', t('admin.members')],
-    ['/yonetim/araclar', '🚗', t('admin.vehicles')],
-    ['/yonetim/evraklar', '📄', t('admin.documents')],
-    ['/yonetim/sablonlar', '✉️', t('admin.mail_templates')],
-    ['/yonetim/kampanya', '📣', t('admin.campaigns')],
-    ['/yonetim/bildirimler', '🔔', t('admin.notifications')],
-    ['/yonetim/planlar', '💳', t('admin.plans')],
-    ['/yonetim/denetim', '🛡️', t('admin.audit')],
+    ['/yonetim/', '📊', t('admin.dashboard'), false],
+    ['/yonetim/uyeler', '👥', t('admin.members'), false],
+    ['/yonetim/planlar', '💳', t('admin.plans'), false],
+    ['/yonetim/odemeler', '💰', 'Ödemeler', false],
+    ['/yonetim/ayarlar', '⚙️', t('admin.site_identity'), false],
+    ['/yonetim/araclar', '🚗', t('admin.vehicles'), true],
+    ['/yonetim/evraklar', '📄', t('admin.documents'), true],
+    ['/yonetim/sablonlar', '✉️', t('admin.mail_templates'), true],
+    ['/yonetim/kampanya', '📣', t('admin.campaigns'), true],
+    ['/yonetim/bildirimler', '🔔', t('admin.notifications'), true],
+    ['/yonetim/denetim', '🛡️', t('admin.audit'), true],
+    ['/yonetim/sistem', '🧩', t('admin.system'), false],
 ];
 ?>
 <!doctype html>
@@ -54,12 +56,12 @@ $items = [
             <a class="brand" href="<?= e(url('/yonetim/')) ?>"><?php require BASE_PATH . '/app/Views/partials/brand.php'; ?></a>
         </div>
         <nav>
-            <?php foreach ($items as [$href, $icon, $label]): ?>
+            <?php foreach ($items as [$href, $icon, $label, $soon]): ?>
                 <?php $active = $href === '/yonetim/' ? rtrim($current, '/') === '/yonetim' : str_starts_with($current, $href); ?>
                 <a href="<?= e(url($href)) ?>" class="<?= $active ? 'is-active' : '' ?>">
                     <span aria-hidden="true"><?= $icon ?></span>
                     <span><?= e((string) $label) ?></span>
-                    <?php if (!in_array($href, ['/yonetim/', '/yonetim/ayarlar'], true)): ?><span class="soon"><?= e('yakında') ?></span><?php endif; ?>
+                    <?php if ($soon): ?><span class="soon"><?= e('yakında') ?></span><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>

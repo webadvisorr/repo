@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   address VARCHAR(255) NULL,
   city VARCHAR(80) NULL,
   country VARCHAR(80) NOT NULL DEFAULT 'CY',
+  credit_balance DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NULL,
   KEY idx_org_owner (owner_user_id),
@@ -160,10 +161,13 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   status ENUM('trialing','active','past_due','cancelled','expired') NOT NULL DEFAULT 'trialing',
   provider VARCHAR(30) NOT NULL DEFAULT 'manual',    -- manual, iyzico, paytr, bank_transfer
   provider_ref VARCHAR(120) NULL,                    -- abonelik/kart token referansı
+  assigned_by INT UNSIGNED NULL,                     -- panelden atayan yönetici
   current_period_start DATETIME NULL,
   current_period_end DATETIME NULL,
   trial_ends_at DATETIME NULL,
   cancel_at_period_end TINYINT(1) NOT NULL DEFAULT 0,
+  notes VARCHAR(255) NULL,
+  price_at_signup DECIMAL(10,2) NULL,
   cancelled_at DATETIME NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NULL,
@@ -181,8 +185,11 @@ CREATE TABLE IF NOT EXISTS payments (
   currency CHAR(3) NOT NULL DEFAULT 'TRY',
   status ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
   provider VARCHAR(30) NOT NULL DEFAULT 'manual',
+  method VARCHAR(30) NOT NULL DEFAULT 'manual',
+  recorded_by INT UNSIGNED NULL,
   provider_txn_id VARCHAR(120) NULL,
   provider_raw TEXT NULL,
+  notes VARCHAR(255) NULL,
   paid_at DATETIME NULL,
   period_start DATETIME NULL,
   period_end DATETIME NULL,
@@ -440,6 +447,33 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   ip VARCHAR(45) NULL,
   is_read TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Kredi bakiyesi ve hareket defteri ----------
+CREATE TABLE IF NOT EXISTS credit_ledger (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NULL,
+  admin_user_id INT UNSIGNED NULL,
+  direction ENUM('credit','debit') NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  balance_after DECIMAL(10,2) NOT NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'TRY',
+  reason VARCHAR(60) NOT NULL DEFAULT 'manual',
+  note VARCHAR(255) NULL,
+  reference VARCHAR(120) NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_ledger_org (organization_id, created_at),
+  CONSTRAINT fk_ledger_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  CONSTRAINT fk_ledger_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Uygulanan migration kayitlari ----------
+CREATE TABLE IF NOT EXISTS migrations (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  filename VARCHAR(190) NOT NULL,
+  applied_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_migration (filename)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Denetim kaydı ----------

@@ -35,11 +35,26 @@ Son güncelleme: Faz 0–1 tamamlandı.
 - SMS / WhatsApp / Telegram gönderim sürücüleri (sağlayıcı bilgileri panelden)
 - SPF/DKIM/DMARC kontrol rehberi
 
-## 🔜 Faz 5 — Abonelik & Ödeme
-- Plan yönetimi, abonelik yaşam döngüsü (trial → active → past_due → cancelled), fatura/ödeme kaydı
-- **iyzico** entegrasyonu (hosted Checkout Form + callback doğrulaması) — KKTC/TR için önerilen;
-  alternatif PayTR. ⚠️ Sağlayıcı başvurusu ve şirket evrakları **kullanıcı tarafında** gerekir.
-- Havale/EFT ile manuel ödeme akışı, admin onayı
+## 🟡 Faz 5 — Abonelik & Ödeme (kısmen tamamlandı)
+
+**Tamamlanan (bu sürüm):**
+- Kredi (ön ödemeli bakiye) altyapısı: `organizations.credit_balance` + **kredi hareket defteri** (`credit_ledger`)
+- Panelden **kredi ekleme / düşme** (gerekçe + not + izlenebilirlik, negatif koruma, atomik işlem)
+- **Abonelik atama / plan değiştirme / süre uzatma / dönem sonunda iptal / hemen iptal / geri alma**
+- **Kredi ile abonelik ödeme** (bakiyeden düşer, dönemi uzatır, başarısızlıkta otomatik iade)
+- Manuel ödeme kaydı: havale/EFT, nakit, kredi kartı; durum onaylama, iade işaretleme
+- Plan CRUD (fiyat, periyot, limitler, kanallar), abone sayısı ve tahsilat raporu
+- Abonelik sona erme taraması (`expireOverdue`) ve plan limiti kontrolü (`canAddVehicle`)
+- **SSH'sız veritabanı güncelleme**: `/yonetim/sistem` üzerinden tek tıkla migration + cron tetikleme
+- Müşteri panelinde kredi bakiyesi, abonelik durumu ve kredi hareket özeti
+
+**Kalan (Faz 5 devamı):**
+- **iyzico** hosted Checkout Form entegrasyonu (3D Secure + callback doğrulaması) — KKTC/TR için önerilen;
+  alternatif PayTR. ⚠️ Merchant başvurusu + şirket evrakları **kullanıcı tarafında** gerekir.
+  Anahtarlar panelden girilecek (`payment.iyzico_api_key` / `payment.iyzico_secret` / ortam adresi).
+- Müşterinin kendi kendine kredi satın alması (self-servis) ve otomatik yenileme (off-session tahsilat)
+- Fatura (PDF) üretimi ve e-arşiv entegrasyonu
+- Bakiye otomatik yenileme uyarısı (düşük kredi bildirimi)
 
 ## 🔜 Faz 6 — Gelişmiş
 - Çoklu dil için sayfa bazlı meta/OG alanları (şu an tek dilde)

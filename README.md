@@ -74,6 +74,25 @@ Geliştirici: **webadvisor** — https://webadvisor.com.tr
 | Ödeme: sağlayıcı (iyzico / PayTR / havale), para birimi, anahtarlar, IBAN | ✅ |
 | Denetim kaydı (audit log), giriş denemeleri, medya kütüphanesi | ✅ |
 
+### Üye · Kredi · Abonelik yönetimi (yeni)
+
+| Özellik | Nerede |
+|---|---|
+| Üye listesi: arama (ad/e-posta/telefon/plaka/kurum), durum & plan filtresi, sayfalama | `/yonetim/uyeler` |
+| Üye detayı: profil, kredi bakiyesi, abonelik, ödemeler, araçlar, denetim geçmişi | `/yonetim/uyeler/{id}` |
+| **Kredi ekleme** (neden + not ile) ve **kredi düşme/düzeltme** | üye detayı |
+| Kredi hareket defteri (her hareket: tutar, kalan bakiye, yetkili, gerekçe) | üye detayı |
+| **Abonelik atama / plan değiştirme** (süre, deneme süresi, ödeme kaydı) | üye detayı |
+| Süre uzatma, dönem sonunda iptal, hemen iptal, iptali geri alma | üye detayı |
+| **Kredi ile abonelik ödeme** (bakiyeden düşer, dönemi uzatır) | üye detayı |
+| Hesap durumu (aktif/pasif/askıya alındı), profil ve bildirim tercihleri, şifre sıfırlama bağlantısı | üye detayı |
+| Plan yönetimi: fiyat, periyot, araç/kullanıcı/evrak limiti, bildirim kanalları, abone sayısı, tahsilat | `/yonetim/planlar` |
+| Ödemeler: havale/EFT, nakit, kart kredi kartı kaydı, kredi yüklemesi, durum onaylama/iade | `/yonetim/odemeler` |
+| Sistem: tek tıkla **veritabanı güncellemesi (migration)**, cron durumu, tablo istatistikleri | `/yonetim/sistem` |
+
+> Kredi ve abonelik işlemleri **tek transaction + satır kilidi** ile yapılır: eşzamanlı iki işlem bakiyeyi bozamaz,
+> bakiye asla eksiye düşmez, her hareket denetim kaydına ve kredi defterine yazılır.
+
 Her alan **ekle / değiştir / kaldır** destekler. Şifre alanları boş bırakılırsa mevcut değer korunur ve
 hiçbir zaman HTML'e basılmaz.
 

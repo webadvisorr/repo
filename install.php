@@ -14,6 +14,7 @@ use App\Core\Database;
 use App\Core\Security;
 use App\Core\Session;
 use App\Core\Settings;
+use App\Core\Migrator;
 use App\Core\Str;
 
 error_reporting(E_ALL);
@@ -171,6 +172,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isLocked) {
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = " . $pdo->quote($saved['db_name'])
             )->fetchColumn();
             $log[] = "Şema uygulandı ({$createdTables} tablo).";
+
+            // Yeni kurulumda şema zaten güncel: migration'ları uygulanmış olarak işaretle.
+            App\Core\Migrator::markAllApplied();
+            $log[] = 'Migration kayıtları hazırlandı.';
 
             Settings::seedDefaults();
             $log[] = 'Varsayılan site ayarları yazıldı.';
