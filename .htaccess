@@ -1,0 +1,68 @@
+# evrako — Apache yapilandirmasi (paylasimli hosting)
+# Amac: sadece index.php, yonetim/index.php, install.php ve assets/ erisilebilir olsun.
+
+Options -Indexes
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Yonetim paneli (temiz URL)
+    RewriteRule ^yonetim/?$ yonetim/index.php [L,QSA]
+    RewriteRule ^yonetim/(.*)$ yonetim/index.php?_route=$1 [L,QSA]
+
+    # Kurulum henuz yapilmadiysa kurulum ekranina yonlendir
+    RewriteCond %{REQUEST_URI} !^/install\.php
+    RewriteCond %{REQUEST_URI} !^/assets/
+    RewriteRule ^(?!index\.php).*$ index.php [L,QSA]
+</IfModule>
+
+# ---- Hassas dosya ve klasorleri kapat ----
+RedirectMatch 404 ^/(app|config|lang|storage|cron|docs|\.git|vendor)/
+<FilesMatch "\.(sql|log|json|lock|md|example\.php|bak|ini|yml|yaml)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+<FilesMatch "^(\.env|composer\.(json|lock)|config\.php|CLAUDE\.md)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+
+# ---- Guvenlik basliklari (Apache modulu varsa) ----
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ---- Sikistirma ----
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# ---- Statik dosya onbellegi ----
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType font/woff2 "access plus 180 days"
+</IfModule>
+
+# ---- Yukleme boyutlari ----
+<IfModule mod_php.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 14M
+</IfModule>
+
+ErrorDocument 404 /index.php

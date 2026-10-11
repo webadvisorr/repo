@@ -1,0 +1,18 @@
+# Kurulum sirasinda uretilir / gizli bilgi icerir — ASLA paylasilmaz
+/config/config.php
+/storage/installed.lock
+
+# Yuklenen dosyalar ve loglar
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/cache/*
+!/storage/cache/.gitkeep
+/storage/backups/*
+
+# Gecici
+*.log
+*.bak
+.DS_Store
+Thumbs.db
