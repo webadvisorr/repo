@@ -37,6 +37,19 @@ Son güncelleme: Faz 0–1 tamamlandı.
 
 ## 🟡 Faz 5 — Abonelik & Ödeme (kısmen tamamlandı)
 
+**Bu sürümde eklenen — Havale/EFT ile self-servis ödeme (kapalı devre çalışıyor):**
+- **Ödeme Merkezi** (`/panel/odeme`): müşteri kendi kredi yükler veya abonelik satın alır/yeniler
+- **Havale niyeti + ödeme kodu**: her talep için `HV-YYYY-XXXXXX` kodu üretilir (`payments.reference`, benzersiz)
+- **Talimat sayfası** (`/panel/odeme/talep/{id}`): IBAN listesi, açıklama uyarısı, geçerlilik süresi, talep geçmişi
+- **"Ödemeyi yaptım" bildirimi**: gönderen/banka/tarih/not → yönetici kuyruğuna düşer
+- **Yönetici onay kuyruğu** (`/yonetim/odemeler`): havale bildirimlerini gör, tutarı düzelt, **Onayla** / **Reddet**
+- Onayda otomatik uygulama: **kredi yükleme** veya **abonelik başlatma / süre uzatma**; **çift onay engeli** (idempotent)
+- Süresi geçen (bildirilmemiş) talepler cron ile kapanır (`PaymentService::expireStale`)
+- İzlenebilirlik: `payment_events` olay günlüğü (niyet, bildirim, onay, red, iptal) + audit kaydı
+- Ayarlar: **çoklu IBAN hesabı editörü**, minimum yükleme, hızlı tutarlar, geçerlilik süresi, havale aç/kapa
+- Müşteri panelinde: kredi bakiyesi, bekleyen talepler, ödeme geçmişi (`/panel/odemelerim`)
+- Ödeme sayfası (iyzico/PayTR) için `payments.gateway_token` / `gateway_url` alanları **hazır** — sonraki sürümde aynı akışa bağlanacak
+
 **Tamamlanan (bu sürüm):**
 - Kredi (ön ödemeli bakiye) altyapısı: `organizations.credit_balance` + **kredi hareket defteri** (`credit_ledger`)
 - Panelden **kredi ekleme / düşme** (gerekçe + not + izlenebilirlik, negatif koruma, atomik işlem)
@@ -49,6 +62,8 @@ Son güncelleme: Faz 0–1 tamamlandı.
 - Müşteri panelinde kredi bakiyesi, abonelik durumu ve kredi hareket özeti
 
 **Kalan (Faz 5 devamı):**
+- **iyzico** / **PayTR** ortak ödeme sayfası entegrasyonu (kullanıcı talebiyle **şimdilik ertelendi**;
+  havale akışı hazır, aynı "niyet → ödeme → uygula" hattına bağlanacak)
 - **iyzico** hosted Checkout Form entegrasyonu (3D Secure + callback doğrulaması) — KKTC/TR için önerilen;
   alternatif PayTR. ⚠️ Merchant başvurusu + şirket evrakları **kullanıcı tarafında** gerekir.
   Anahtarlar panelden girilecek (`payment.iyzico_api_key` / `payment.iyzico_secret` / ortam adresi).

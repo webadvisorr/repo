@@ -186,6 +186,16 @@ CREATE TABLE IF NOT EXISTS payments (
   status ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
   provider VARCHAR(30) NOT NULL DEFAULT 'manual',
   method VARCHAR(30) NOT NULL DEFAULT 'manual',
+  kind VARCHAR(30) NOT NULL DEFAULT 'manual',            -- credit | subscription | manual
+  reference VARCHAR(40) NULL,                            -- musteriye gosterilen odeme kodu (HV-2026-0001)
+  user_id INT UNSIGNED NULL,                             -- odemeyi baslatan kullanici
+  plan_id INT UNSIGNED NULL,                             -- abonelik satin aliminda plan
+  gateway_token VARCHAR(191) NULL,                       -- odeme sayfasi saglayici tokeni (ileride iyzico/paytr)
+  gateway_url VARCHAR(500) NULL,                         -- odeme sayfasi adresi (ileride)
+  meta_json TEXT NULL,                                   -- havale bildirimi vb. ek alanlar
+  expires_at DATETIME NULL,
+  approved_by INT UNSIGNED NULL,                         -- havaleyi onaylayan yonetici
+  applied_at DATETIME NULL,                              -- kredi/abonelik uygulanma ani
   recorded_by INT UNSIGNED NULL,
   provider_txn_id VARCHAR(120) NULL,
   provider_raw TEXT NULL,
@@ -196,7 +206,23 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at DATETIME NOT NULL,
   KEY idx_pay_org (organization_id),
   KEY idx_pay_status (status),
+  KEY idx_pay_kind (kind),
+  UNIQUE KEY uniq_pay_ref (reference),
   CONSTRAINT fk_pay_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Odeme olay gunlugu: havale bildirimi, onay/red, saglayici cagrilari (izlenebilirlik)
+CREATE TABLE IF NOT EXISTS payment_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  payment_id BIGINT UNSIGNED NOT NULL,
+  gateway VARCHAR(30) NOT NULL DEFAULT 'bank_transfer',
+  event VARCHAR(60) NOT NULL,
+  payload TEXT NULL,
+  ip VARCHAR(45) NULL,
+  actor_user_id INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_pe_payment (payment_id),
+  CONSTRAINT fk_pe_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Araç türleri / evrak türleri ----------

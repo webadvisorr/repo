@@ -139,15 +139,25 @@ final class SettingsController extends Controller
                 'payment.provider' => ['label' => 'payment_provider', 'options' => ['manual', 'iyzico', 'paytr', 'bank_transfer']],
                 'payment.currency' => ['label' => 'payment_currency', 'options' => ['TRY', 'EUR', 'USD', 'GBP']],
             ],
+            'bool' => [
+                'payment.bank_enabled' => ['label' => 'bank_enabled'],
+            ],
+            'number' => [
+                'payment.min_topup'        => ['label' => 'min_topup', 'min' => 1, 'max' => 100000, 'step' => '0.01'],
+                'payment.intent_ttl_hours' => ['label' => 'intent_ttl', 'min' => 1, 'max' => 720],
+            ],
             'text' => [
-                'payment.iyzico_api_key' => ['label' => 'iyzico API key', 'max' => 190],
-                'payment.iyzico_base'    => ['label' => 'iyzico ortam adresi', 'max' => 190],
+                'payment.bank_note'      => ['label' => 'bank_note', 'max' => 255, 'textarea' => true],
+                'payment.topup_presets'  => ['label' => 'topup_presets', 'max' => 190],
                 'payment.bank_iban'      => ['label' => 'bank_iban', 'max' => 64],
                 'payment.bank_owner'     => ['label' => 'bank_owner', 'max' => 120],
+                'payment.iyzico_api_key' => ['label' => 'iyzico API key', 'max' => 190],
+                'payment.iyzico_base'    => ['label' => 'iyzico ortam adresi (ödeme sayfası için, sonraki sürüm)', 'max' => 190],
             ],
             'password' => [
                 'payment.iyzico_secret' => ['label' => 'iyzico secret'],
             ],
+            'bank_accounts' => true,
         ],
     ];
 
@@ -237,6 +247,33 @@ final class SettingsController extends Controller
                 }
             }
             Settings::set('theme.colors', $current, 'theme');
+            $savedCount++;
+        }
+
+        if (!empty($definition['bank_accounts'])) {
+            $banks   = $this->request->array('ba_bank');
+            $owners  = $this->request->array('ba_owner');
+            $ibans   = $this->request->array('ba_iban');
+            $branch  = $this->request->array('ba_branch');
+            $acct    = $this->request->array('ba_account');
+            $notes   = $this->request->array('ba_note');
+            $rows = [];
+            foreach ($ibans as $i => $iban) {
+                $iban = preg_replace('/[^A-Za-z0-9]/', '', (string) $iban) ?? '';
+                $accountNo = preg_replace('/\s+/', '', trim((string) ($acct[$i] ?? ''))) ?? '';
+                if ($iban === '' && $accountNo === '') {
+                    continue;
+                }
+                $rows[] = [
+                    'bank'    => Str::limit(trim((string) ($banks[$i] ?? '')), 80, ''),
+                    'owner'   => Str::limit(trim((string) ($owners[$i] ?? '')), 120, ''),
+                    'iban'    => Str::limit($iban, 40, ''),
+                    'account' => Str::limit($accountNo, 40, ''),
+                    'branch'  => Str::limit(trim((string) ($branch[$i] ?? '')), 80, ''),
+                    'note'    => Str::limit(trim((string) ($notes[$i] ?? '')), 160, ''),
+                ];
+            }
+            Settings::set('payment.bank_accounts', $rows, 'payment');
             $savedCount++;
         }
 

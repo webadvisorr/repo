@@ -116,4 +116,10 @@ return [
     'payment.iyzico_base'   => ['group' => 'payment', 'value' => 'https://sandbox-api.iyzipay.com'],
     'payment.bank_iban'     => ['group' => 'payment', 'value' => ''],
     'payment.bank_owner'    => ['group' => 'payment', 'value' => ''],
+    'payment.bank_enabled'  => ['group' => 'payment', 'value' => '1'],
+    'payment.bank_note'     => ['group' => 'payment', 'value' => 'Açıklama alanına ödeme kodunuzu yazmanız, ödemenizin otomatik eşleşmesini sağlar.'],
+    'payment.bank_accounts' => ['group' => 'payment', 'value' => []],
+    'payment.min_topup'     => ['group' => 'payment', 'value' => '100'],
+    'payment.topup_presets' => ['group' => 'payment', 'value' => [250, 500, 1000, 2500]],
+    'payment.intent_ttl_hours' => ['group' => 'payment', 'value' => '72'],
 ];

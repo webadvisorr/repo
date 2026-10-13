@@ -8,6 +8,7 @@ use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Services\CreditService;
+use App\Services\PaymentService;
 use App\Services\SubscriptionService;
 
 /** Ödeme kayıtları: liste, manuel ödeme kaydı, kredi yüklemesi ve iptal/iade. */
@@ -61,6 +62,7 @@ final class PaymentsController extends Controller
             'status'  => $status,
             'members' => Database::select("SELECT u.id, u.full_name, u.email FROM users u WHERE u.deleted_at IS NULL AND u.role = 'customer' ORDER BY u.full_name ASC LIMIT 500"),
             'plans'   => SubscriptionService::plans(true),
+            'declarations' => PaymentService::pendingDeclarations(100),
             'currency' => (string) \App\Core\Settings::get('payment.currency', 'TRY'),
         ]);
     }
@@ -138,6 +140,39 @@ final class PaymentsController extends Controller
             $this->flashError((string) $result['error']);
         } else {
             $this->flashSuccess('Abonelik atandı ve ödeme kaydedildi. Bitiş: ' . format_date((string) $result['period_end']));
+        }
+        $this->redirect('/yonetim/odemeler');
+    }
+
+    /** Bekleyen havale bildirimini onaylar: kredi yükler / aboneliği başlatır. */
+    public function approveDeclared(): void
+    {
+        $paymentId = $this->request->int('payment_id');
+        $amountRaw = trim((string) $this->request->input('amount', ''));
+        $amount = $amountRaw === '' ? null : round((float) str_replace(',', '.', $amountRaw), 2);
+        $note = mb_substr($this->request->string('note'), 0, 250);
+
+        $result = PaymentService::approve($paymentId, $amount, $note !== '' ? $note : null);
+        if (!$result['ok']) {
+            $this->flashError((string) $result['error']);
+        } elseif (!empty($result['already'])) {
+            $this->flashError('Bu ödeme zaten işlenmiş (çift kayıt engellendi).');
+        } else {
+            $this->flashSuccess('Havale onaylandı ve kredi/abonelik uygulandı.');
+        }
+        $this->redirect('/yonetim/odemeler');
+    }
+
+    /** Bekleyen havale bildirimini reddeder. */
+    public function rejectDeclared(): void
+    {
+        $paymentId = $this->request->int('payment_id');
+        $reason = mb_substr($this->request->string('reason'), 0, 200);
+        $result = PaymentService::reject($paymentId, $reason);
+        if (!$result['ok']) {
+            $this->flashError((string) $result['error']);
+        } else {
+            $this->flashSuccess('Ödeme reddedildi.');
         }
         $this->redirect('/yonetim/odemeler');
     }

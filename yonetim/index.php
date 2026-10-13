@@ -125,6 +125,8 @@ $router->post('/yonetim/planlar/sil', [PlansController::class, 'destroy'], ['adm
 $router->get('/yonetim/odemeler', [PaymentsController::class, 'index'], ['admin']);
 $router->post('/yonetim/odemeler/kaydet', [PaymentsController::class, 'store'], ['admin', 'csrf']);
 $router->post('/yonetim/odemeler/durum', [PaymentsController::class, 'updateStatus'], ['admin', 'csrf']);
+$router->post('/yonetim/odemeler/havale-onayla', [PaymentsController::class, 'approveDeclared'], ['admin', 'csrf']);
+$router->post('/yonetim/odemeler/havale-reddet', [PaymentsController::class, 'rejectDeclared'], ['admin', 'csrf']);
 
 // ---- Sistem ----
 $router->get('/yonetim/sistem', [SystemController::class, 'index'], ['admin']);

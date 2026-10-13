@@ -9,7 +9,11 @@ $user = Auth::user();
                 <h1 style="font-size:1.7rem;margin-bottom:4px"><?= e(t('admin.welcome', ['name' => (string) ($user['full_name'] ?? '')])) ?></h1>
                 <p class="muted mb-0"><?= e('Araç panelinizden evraklarınızı yönetin.') ?></p>
             </div>
-            <a class="btn btn-outline btn-sm" href="<?= e(url('/cikis')) ?>"><?= e(t('auth.logout')) ?></a>
+            <div class="row" style="gap:8px">
+                <a class="btn btn-accent btn-sm" href="<?= e(url('/panel/odeme')) ?>"><?= e(t('billing.title')) ?></a>
+                <a class="btn btn-outline btn-sm" href="<?= e(url('/panel/odemelerim')) ?>"><?= e(t('billing.history')) ?></a>
+                <a class="btn btn-outline btn-sm" href="<?= e(url('/cikis')) ?>"><?= e(t('auth.logout')) ?></a>
+            </div>
         </div>
 
         <div class="grid grid-3 mb-3">

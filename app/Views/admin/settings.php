@@ -69,12 +69,13 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
             <h2 style="font-size:1.05rem"><?= e($tabLabels[$tab] ?? $tab) ?></h2>
             <div class="field-grid">
                 <?php foreach (($definition['text'] ?? []) as $key => $meta): ?>
+                    <?php $textValue = Settings::get($key, ''); if (is_array($textValue)) { $textValue = implode(', ', array_map('strval', $textValue)); } ?>
                     <div class="field">
                         <label for="f-<?= e(md5($key)) ?>"><?= e(t('settings.' . $meta['label'])) ?></label>
                         <?php if (!empty($meta['textarea'])): ?>
-                            <textarea id="f-<?= e(md5($key)) ?>" name="<?= e(str_replace('.', '_', (string) $key)) ?>" maxlength="<?= (int) ($meta['max'] ?? 255) ?>"><?= e((string) Settings::get($key, '')) ?></textarea>
+                            <textarea id="f-<?= e(md5($key)) ?>" name="<?= e(str_replace('.', '_', (string) $key)) ?>" maxlength="<?= (int) ($meta['max'] ?? 255) ?>"><?= e((string) $textValue) ?></textarea>
                         <?php else: ?>
-                            <input id="f-<?= e(md5($key)) ?>" type="text" name="<?= e(str_replace('.', '_', (string) $key)) ?>" maxlength="<?= (int) ($meta['max'] ?? 255) ?>" value="<?= e((string) Settings::get($key, '')) ?>">
+                            <input id="f-<?= e(md5($key)) ?>" type="text" name="<?= e(str_replace('.', '_', (string) $key)) ?>" maxlength="<?= (int) ($meta['max'] ?? 255) ?>" value="<?= e((string) $textValue) ?>">
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
@@ -157,6 +158,40 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
                 <?php endforeach; ?>
             </div>
             <p class="hint mt-2"><?= e('Bu palet sitenin tamamında (butonlar, durum renkleri, arka plan) kullanılır.') ?></p>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($definition['bank_accounts'])): ?>
+        <?php
+        $bankRows = (array) Settings::get('payment.bank_accounts', []);
+        $bankRows = array_values(array_filter($bankRows, 'is_array'));
+        while (count($bankRows) < 3) { $bankRows[] = ['bank' => '', 'owner' => '', 'iban' => '', 'account' => '', 'branch' => '', 'note' => '']; }
+        ?>
+        <div class="card mb-3">
+            <h2 style="font-size:1.05rem"><?= e(t('settings.bank_accounts')) ?></h2>
+            <p class="hint"><?= e(t('settings.bank_accounts_hint')) ?></p>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead><tr>
+                        <th><?= e(t('settings.bank_name')) ?></th><th><?= e(t('settings.bank_owner_label')) ?></th>
+                        <th>IBAN</th><th><?= e(t('settings.bank_account_no')) ?></th>
+                        <th><?= e(t('settings.bank_branch')) ?></th><th><?= e(t('settings.bank_note_col')) ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ($bankRows as $row): ?>
+                        <tr>
+                            <td><input type="text" name="ba_bank[]" maxlength="80" value="<?= e((string) ($row['bank'] ?? '')) ?>"></td>
+                            <td><input type="text" name="ba_owner[]" maxlength="120" value="<?= e((string) ($row['owner'] ?? '')) ?>"></td>
+                            <td><input type="text" name="ba_iban[]" maxlength="40" class="mono" placeholder="TR00 0000 0000 0000 0000 0000 00" value="<?= e((string) ($row['iban'] ?? '')) ?>"></td>
+                            <td><input type="text" name="ba_account[]" maxlength="40" class="mono" value="<?= e((string) ($row['account'] ?? '')) ?>"></td>
+                            <td><input type="text" name="ba_branch[]" maxlength="80" value="<?= e((string) ($row['branch'] ?? '')) ?>"></td>
+                            <td><input type="text" name="ba_note[]" maxlength="160" value="<?= e((string) ($row['note'] ?? '')) ?>"></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <p class="hint mt-2"><?= e(t('settings.bank_accounts_remove_hint')) ?></p>
         </div>
     <?php endif; ?>
 

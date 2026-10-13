@@ -8,6 +8,7 @@ declare(strict_types=1);
 require __DIR__ . '/app/bootstrap.php';
 
 use App\Controllers\Site\AuthController;
+use App\Controllers\Site\BillingController;
 use App\Controllers\Site\HomeController;
 use App\Controllers\Site\MediaController;
 use App\Core\Config;
@@ -106,6 +107,15 @@ $router->get('/cikis', [AuthController::class, 'logout']);
 $router->get('/sifremi-unuttum', [AuthController::class, 'showForgot'], ['guest']);
 $router->post('/sifremi-unuttum', [AuthController::class, 'sendReset'], ['csrf', 'guest']);
 $router->get('/panel', [AuthController::class, 'dashboard'], ['auth']);
+
+// ---- Ödeme merkezi (şimdilik havale/EFT) ----
+$router->get('/panel/odeme', [BillingController::class, 'index'], ['auth']);
+$router->post('/panel/odeme/kredi', [BillingController::class, 'startCredit'], ['auth', 'csrf']);
+$router->post('/panel/odeme/abonelik', [BillingController::class, 'startSubscription'], ['auth', 'csrf']);
+$router->get('/panel/odeme/talep/{id}', [BillingController::class, 'show'], ['auth']);
+$router->post('/panel/odeme/talep/{id}/bildir', [BillingController::class, 'declare'], ['auth', 'csrf']);
+$router->post('/panel/odeme/talep/{id}/iptal', [BillingController::class, 'cancel'], ['auth', 'csrf']);
+$router->get('/panel/odemelerim', [BillingController::class, 'history'], ['auth']);
 
 $router->fallback(static function (int $status): string {
     return View::render('errors/' . $status, ['title' => t('http.' . $status)], null);

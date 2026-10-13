@@ -85,7 +85,7 @@ final class Migrator
                     'applied_at' => date('Y-m-d H:i:s'),
                 ]);
                 $result['executed'][] = $filename;
-                Audit::log('system.migration', 'migration', $filename);
+                Audit::log('system.migration', 'migration', null, ['filename' => $filename]);
             }
         }
 

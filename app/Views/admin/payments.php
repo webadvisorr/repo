@@ -17,6 +17,58 @@ $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'failed' => 'Baş
     <div class="card stat"><div class="stat__value"><?= (int) $totals['count'] ?></div><div class="stat__label"><?= e('Kayıt sayısı') ?></div></div>
 </div>
 
+<?php if (!empty($declarations)): ?>
+    <div class="card mb-3" style="border:1px solid var(--c-warning)">
+        <h2 style="font-size:1.1rem">🏦 <?= e('Bekleyen havale bildirimleri') ?> (<?= count($declarations) ?>)</h2>
+        <p class="muted" style="font-size:13.5px"><?= e('Müşteri "ödemeyi yaptım" dedi. Banka hesabınızda parayı gördükten sonra onaylayın; kredi veya abonelik otomatik uygulanır.') ?></p>
+        <div class="table-wrap">
+            <table class="data">
+                <thead><tr>
+                    <th><?= e('Ödeme kodu') ?></th><th><?= e('Üye') ?></th><th><?= e('Tür') ?></th>
+                    <th><?= e('Tutar') ?></th><th><?= e('Bildirim') ?></th><th><?= e('İşlem') ?></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($declarations as $d): ?>
+                    <?php $dm = json_decode((string) ($d['meta_json'] ?? ''), true); $dd = is_array($dm) ? ($dm['declared'] ?? []) : []; ?>
+                    <tr>
+                        <td class="mono"><?= e((string) $d['reference']) ?></td>
+                        <td>
+                            <?= e((string) ($d['user_name'] ?? '—')) ?>
+                            <div class="muted" style="font-size:12.5px"><?= e((string) ($d['user_email'] ?? '')) ?></div>
+                        </td>
+                        <td><?= e((string) $d['kind'] === 'subscription' ? 'Abonelik' : 'Kredi') ?>
+                            <?php if (!empty($d['plan_name'])): ?><div class="muted" style="font-size:12.5px"><?= e((string) $d['plan_name']) ?></div><?php endif; ?></td>
+                        <td class="mono"><?= e(number_format((float) $d['amount'], 2, ',', '.')) ?> <?= e((string) $d['currency']) ?></td>
+                        <td class="muted" style="font-size:12.5px">
+                            <?= e(format_date((string) ($dd['at'] ?? ''), 'd.m.Y H:i')) ?><br>
+                            <?php if (!empty($dd['sender'])): ?><?= e('Gönderen') ?>: <?= e((string) $dd['sender']) ?><br><?php endif; ?>
+                            <?php if (!empty($dd['bank'])): ?><?= e('Banka') ?>: <?= e((string) $dd['bank']) ?><br><?php endif; ?>
+                            <?php if (!empty($dd['date'])): ?><?= e('Tarih') ?>: <?= e((string) $dd['date']) ?><br><?php endif; ?>
+                            <?php if (!empty($dd['note'])): ?><?= e((string) $dd['note']) ?><?php endif; ?>
+                        </td>
+                        <td>
+                            <form method="post" action="<?= e(url('/yonetim/odemeler/havale-onayla')) ?>" class="row mb-2" style="gap:6px">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="payment_id" value="<?= (int) $d['id'] ?>">
+                                <input type="number" name="amount" step="0.01" min="0" style="width:110px" value="<?= e(number_format((float) $d['amount'], 2, '.', '')) ?>" aria-label="<?= e('Tutar') ?>">
+                                <button class="btn btn-primary btn-sm" type="submit"><?= e('Onayla') ?></button>
+                            </form>
+                            <form method="post" action="<?= e(url('/yonetim/odemeler/havale-reddet')) ?>" class="row" style="gap:6px"
+                                  data-confirm="<?= e('Bu ödemeyi reddetmek istediğinize emin misiniz?') ?>">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="payment_id" value="<?= (int) $d['id'] ?>">
+                                <input type="text" name="reason" maxlength="200" placeholder="<?= e('Red gerekçesi') ?>" style="width:150px">
+                                <button class="btn btn-outline btn-sm" type="submit" style="color:var(--c-danger);border-color:var(--c-danger)"><?= e('Reddet') ?></button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="card mb-3">
     <h2 style="font-size:1.05rem"><?= e('Yeni ödeme / kredi kaydı') ?></h2>
     <form method="post" action="<?= e(url('/yonetim/odemeler/kaydet')) ?>">
@@ -88,7 +140,7 @@ $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'failed' => 'Baş
     <table class="data">
         <thead>
             <tr>
-                <th>#</th><th><?= e('Tarih') ?></th><th><?= e('Üye / kurum') ?></th><th><?= e('Plan') ?></th>
+                <th>#</th><th><?= e('Tarih') ?></th><th><?= e('Ödeme kodu') ?></th><th><?= e('Tür') ?></th><th><?= e('Üye / kurum') ?></th><th><?= e('Plan') ?></th>
                 <th><?= e('Tutar') ?></th><th><?= e('Yöntem') ?></th><th><?= e('Durum') ?></th><th><?= e('Kaydeden') ?></th><th></th>
             </tr>
         </thead>
@@ -98,6 +150,8 @@ $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'failed' => 'Baş
             <tr>
                 <td class="mono"><?= (int) $row['id'] ?></td>
                 <td class="muted"><?= e(format_date((string) ($row['paid_at'] ?? $row['created_at']), 'd.m.Y H:i')) ?></td>
+                <td class="mono"><?= e((string) ($row['reference'] ?? '—')) ?></td>
+                <td><?= e(['credit' => 'Kredi', 'subscription' => 'Abonelik'][(string) ($row['kind'] ?? '')] ?? 'Manuel') ?></td>
                 <td>
                     <?php if (!empty($row['owner_id'])): ?>
                         <a href="<?= e(url('/yonetim/uyeler/' . (int) $row['owner_id'])) ?>"><?= e((string) ($row['organization_name'] ?? '—')) ?></a>
@@ -129,7 +183,7 @@ $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'failed' => 'Baş
             </tr>
         <?php endforeach; ?>
         <?php if ($rows === []): ?>
-            <tr><td colspan="9" class="muted"><?= e('Ödeme kaydı yok.') ?></td></tr>
+            <tr><td colspan="11" class="muted"><?= e('Ödeme kaydı yok.') ?></td></tr>
         <?php endif; ?>
         </tbody>
     </table>

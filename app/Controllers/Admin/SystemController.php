@@ -62,15 +62,16 @@ final class SystemController extends Controller
     public function runCron(): void
     {
         $expired = \App\Services\SubscriptionService::expireOverdue();
+        $expiredIntents = \App\Services\PaymentService::expireStale();
 
         $reminderResult = ['created' => 0, 'sent' => 0, 'failed' => 0];
         if (is_file(BASE_PATH . '/app/Services/ReminderService.php')) {
             $reminderResult = \App\Services\ReminderService::run();
         }
 
-        \App\Core\Audit::log('system.cron_manual', 'system', null, ['expired' => $expired] + $reminderResult);
-        $this->flashSuccess(sprintf('Cron çalıştı. Süresi geçen abonelik: %d · Oluşturulan bildirim: %d · Gönderilen: %d · Hata: %d',
-            $expired, $reminderResult['created'], $reminderResult['sent'], $reminderResult['failed']));
+        \App\Core\Audit::log('system.cron_manual', 'system', null, ['expired' => $expired, 'expired_intents' => $expiredIntents] + $reminderResult);
+        $this->flashSuccess(sprintf('Cron çalıştı. Süresi geçen abonelik: %d · Süresi geçen ödeme talebi: %d · Oluşturulan bildirim: %d · Gönderilen: %d · Hata: %d',
+            $expired, $expiredIntents, $reminderResult['created'], $reminderResult['sent'], $reminderResult['failed']));
         $this->redirect('/yonetim/sistem');
     }
 
