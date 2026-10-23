@@ -11,15 +11,19 @@ final class Session
             return;
         }
         $secure = (new Request())->isSecure();
+        $name = (string) Config::get('app.session_name', 'evrako_session');
+        if ($name !== '') {
+            session_name($name);
+        }
+        // session_set_cookie_params yalnızca tanımlı anahtarları kabul eder;
+        // oturum adı ve strict mode ayrı API'lerle ayarlanır.
         $params = [
-            'name'            => (string) Config::get('app.session_name', 'evrako_session'),
-            'lifetime'        => 60 * 60 * 8,
-            'path'            => '/',
-            'domain'          => '',
-            'secure'          => $secure,
-            'httponly'        => true,
-            'samesite'        => 'Lax',
-            'use_strict_mode' => true,
+            'lifetime' => 60 * 60 * 8,
+            'path'     => '/',
+            'domain'   => '',
+            'secure'   => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax',
         ];
         if (PHP_VERSION_ID >= 70300) {
             session_set_cookie_params($params);
@@ -27,6 +31,7 @@ final class Session
             session_set_cookie_params($params['lifetime'], $params['path'] . '; samesite=' . $params['samesite'], $params['domain'], $params['secure'], $params['httponly']);
         }
         @ini_set('session.use_only_cookies', '1');
+        @ini_set('session.use_strict_mode', '1');
         if ($secure) {
             @ini_set('session.cookie_secure', '1');
         }

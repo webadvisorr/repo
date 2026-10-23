@@ -2,36 +2,39 @@
 <div class="row row--between mb-3">
     <div>
         <h1 style="font-size:1.6rem;margin:0 0 4px"><?= e(t('admin.members')) ?></h1>
-        <p class="muted mb-0"><?= e('Kredi yükleyin, abonelik atayın, hesap durumunu yönetin.') ?></p>
+        <p class="muted mb-0"><?= e(__('Kredi yükleyin, abonelik atayın, hesap durumunu yönetin.')) ?></p>
     </div>
-    <a class="btn btn-primary btn-sm" href="<?= e(url('/yonetim/odemeler')) ?>"><?= e('Kredi / ödeme kaydı') ?></a>
+    <a class="btn btn-primary btn-sm" href="<?= e(url('/yonetim/odemeler')) ?>"><?= e(__('Kredi / ödeme kaydı')) ?></a>
 </div>
 
 <div class="grid grid-4 mb-3">
-    <div class="card stat"><div class="stat__value"><?= (int) $totals['users'] ?></div><div class="stat__label"><?= e('Toplam kullanıcı') ?></div></div>
-    <div class="card stat"><div class="stat__value"><?= (int) $totals['customers'] ?></div><div class="stat__label"><?= e('Müşteri') ?></div></div>
-    <div class="card stat"><div class="stat__value" style="color:var(--c-accent)"><?= e(number_format((float) $totals['credit'], 2, ',', '.')) ?></div><div class="stat__label"><?= e('Yüklü kredi toplamı') ?></div></div>
-    <div class="card stat"><div class="stat__value"><?= (int) $totals['active'] ?></div><div class="stat__label"><?= e('Aktif abonelik') ?></div></div>
+    <div class="card stat"><div class="stat__value"><?= (int) $totals['users'] ?></div><div class="stat__label"><?= e(__('Toplam kullanıcı')) ?></div></div>
+    <div class="card stat"><div class="stat__value"><?= (int) $totals['customers'] ?></div><div class="stat__label"><?= e(__('Müşteri')) ?></div></div>
+    <div class="card stat"><div class="stat__value" style="color:var(--c-accent)"><?= e(number_format((float) $totals['credit'], 2, ',', '.')) ?></div><div class="stat__label"><?= e(__('Yüklü kredi toplamı')) ?></div></div>
+    <div class="card stat"><div class="stat__value"><?= (int) $totals['active'] ?></div><div class="stat__label"><?= e(__('Aktif abonelik')) ?></div></div>
 </div>
 
 <form method="get" action="<?= e(url('/yonetim/uyeler')) ?>" class="card mb-3">
     <div class="row">
-        <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= e('Ad, e-posta, telefon, plaka veya kurum ara…') ?>" style="flex:2;min-width:220px">
+        <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= e(__('Ad, e-posta, telefon, plaka veya kurum ara…')) ?>" style="flex:2;min-width:220px">
         <select name="status" style="flex:1;min-width:150px">
-            <option value=""><?= e('Tüm durumlar') ?></option>
+            <option value=""><?= e(__('Tüm durumlar')) ?></option>
             <?php foreach (['active', 'passive', 'suspended'] as $option): ?>
                 <option value="<?= e($option) ?>" <?= $status === $option ? 'selected' : '' ?>><?= e($option) ?></option>
             <?php endforeach; ?>
         </select>
         <select name="plan" style="flex:1;min-width:150px">
-            <option value=""><?= e('Tüm planlar') ?></option>
+            <option value=""><?= e(__('Tüm planlar')) ?></option>
             <?php foreach ($plans as $p): ?>
                 <option value="<?= e((string) $p['key']) ?>" <?= $plan === (string) $p['key'] ? 'selected' : '' ?>><?= e((string) $p['name']) ?></option>
             <?php endforeach; ?>
         </select>
+        <span style="display:inline-flex;align-items:center;gap:6px;min-height:38px">
+            <?php $from = (string) ($from ?? ''); $to = (string) ($to ?? ''); require BASE_PATH . '/app/Views/partials/date_range.php'; ?>
+        </span>
         <button class="btn btn-primary" type="submit"><?= e(t('common.search')) ?></button>
-        <?php if ($search !== '' || $status !== '' || $plan !== ''): ?>
-            <a class="btn btn-outline" href="<?= e(url('/yonetim/uyeler')) ?>"><?= e('Temizle') ?></a>
+        <?php if ($search !== '' || $status !== '' || $plan !== '' || ($from ?? '') !== '' || ($to ?? '') !== ''): ?>
+            <a class="btn btn-outline" href="<?= e(url('/yonetim/uyeler')) ?>"><?= e(__('Temizle')) ?></a>
         <?php endif; ?>
     </div>
 </form>
@@ -43,11 +46,11 @@
                 <th>#</th>
                 <th><?= e(t('auth.name')) ?></th>
                 <th><?= e(t('auth.email')) ?></th>
-                <th><?= e('Plan') ?></th>
-                <th><?= e('Kredi') ?></th>
-                <th><?= e('Araç') ?></th>
-                <th><?= e('Durum') ?></th>
-                <th><?= e('Son giriş') ?></th>
+                <th><?= e(__('Plan')) ?></th>
+                <th><?= e(__('Kredi')) ?></th>
+                <th><?= e(__('Araç')) ?></th>
+                <th><?= e(__('Durum')) ?></th>
+                <th><?= e(__('Son giriş')) ?></th>
                 <th></th>
             </tr>
         </thead>
@@ -83,11 +86,11 @@
                     <span class="badge <?= $cls ?>"><?= e((string) $row['status']) ?></span>
                 </td>
                 <td class="muted"><?= e($row['last_login_at'] ? format_date((string) $row['last_login_at'], 'd.m.Y H:i') : '—') ?></td>
-                <td><a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler/' . (int) $row['id'])) ?>"><?= e('Detay') ?></a></td>
+                <td><a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler/' . (int) $row['id'])) ?>"><?= e(__('Detay')) ?></a></td>
             </tr>
         <?php endforeach; ?>
         <?php if ($rows === []): ?>
-            <tr><td colspan="9" class="muted"><?= e('Kayıt bulunamadı.') ?></td></tr>
+            <tr><td colspan="9" class="muted"><?= e(__('Kayıt bulunamadı.')) ?></td></tr>
         <?php endif; ?>
         </tbody>
     </table>
@@ -95,10 +98,10 @@
 
 <div class="row mt-3">
     <?php if ($page > 1): ?>
-        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler?page=' . ($page - 1) . '&q=' . urlencode($search) . '&status=' . urlencode($status) . '&plan=' . urlencode($plan))) ?>">← <?= e('Önceki') ?></a>
+        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler?' . http_build_query(array_filter(['page' => $page - 1, 'q' => $search, 'status' => $status, 'plan' => $plan, 'baslangic' => $from ?? '', 'bitis' => $to ?? ''], static fn ($v) => $v !== '' && $v !== null)))) ?>">← <?= e(__('Önceki')) ?></a>
     <?php endif; ?>
     <span class="muted"><?= e('Sayfa ' . $page) ?></span>
     <?php if (!empty($hasNext)): ?>
-        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler?page=' . ($page + 1) . '&q=' . urlencode($search) . '&status=' . urlencode($status) . '&plan=' . urlencode($plan))) ?>"><?= e('Sonraki') ?> →</a>
+        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler?' . http_build_query(array_filter(['page' => $page + 1, 'q' => $search, 'status' => $status, 'plan' => $plan, 'baslangic' => $from ?? '', 'bitis' => $to ?? ''], static fn ($v) => $v !== '' && $v !== null)))) ?>"><?= e(__('Sonraki')) ?> →</a>
     <?php endif; ?>
 </div>

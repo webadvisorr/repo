@@ -26,6 +26,8 @@ final class MembersController extends Controller
         $search = trim((string) $this->request->input('q', ''));
         $status = (string) $this->request->input('status', '');
         $plan   = (string) $this->request->input('plan', '');
+        $from   = (string) (db_date($this->request->input('baslangic', '')) ?? '');
+        $to     = (string) (db_date($this->request->input('bitis', '')) ?? '');
         $page   = max(1, $this->request->int('page', 1));
         $perPage = 20;
 
@@ -45,6 +47,14 @@ final class MembersController extends Controller
         if ($plan !== '') {
             $where[] = 'p.`key` = ?';
             $params[] = $plan;
+        }
+        if ($from !== '') {
+            $where[] = 'u.created_at >= ?';
+            $params[] = $from . ' 00:00:00';
+        }
+        if ($to !== '') {
+            $where[] = 'u.created_at <= ?';
+            $params[] = $to . ' 23:59:59';
         }
 
         // ONLY_FULL_GROUP_BY uyumsuzluğunu önlemek için alt sorgular kullanılır.
@@ -91,6 +101,8 @@ final class MembersController extends Controller
             'search'   => $search,
             'status'   => $status,
             'plan'     => $plan,
+            'from'     => $from,
+            'to'       => $to,
             'page'     => $page,
             'hasNext'  => $hasNext,
             'plans'    => SubscriptionService::plans(false),
@@ -176,6 +188,7 @@ final class MembersController extends Controller
         $member = $this->memberOrRedirect((int) $this->request->int('user_id'));
         $organizationId = (int) ($member['organization_id'] ?? 0);
         $planId = $this->request->int('plan_id');
+        $interval = (string) $this->request->input('interval', 'month');
         $days = $this->request->int('days', 0);
         $trialDays = $this->request->int('trial_days', 0);
         $markPaid = $this->request->bool('mark_paid');
@@ -184,6 +197,7 @@ final class MembersController extends Controller
 
         $result = SubscriptionService::assign($organizationId, $planId, [
             'days'       => $days > 0 ? $days : null,
+            'interval'   => $interval,
             'trial_days' => $trialDays,
             'mark_paid'  => $markPaid,
             'method'     => $method,
@@ -327,7 +341,7 @@ final class MembersController extends Controller
             $this->redirect('/yonetim/uyeler/' . (int) $member['id']);
         }
 
-        $brand = (string) Settings::get('brand.title', 'evrako');
+        $brand = (string) Settings::get('brand.title', 'Evrako');
         $result = $mailer->send(
             (string) $member['email'],
             t('auth.reset_title') . ' — ' . $brand,

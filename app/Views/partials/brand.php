@@ -3,7 +3,7 @@
 use App\Core\Settings;
 $logoLight = (string) Settings::get('brand.logo_light', '');
 $logoDark = (string) Settings::get('brand.logo_dark', '');
-$siteTitle = (string) Settings::get('brand.title', 'evrako');
+$siteTitle = (string) Settings::get('brand.title', 'Evrako');
 ?>
 <?php if ($logoLight !== '' || $logoDark !== ''): ?>
     <?php if ($logoLight !== '' && $logoDark !== ''): ?>

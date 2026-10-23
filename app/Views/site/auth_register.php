@@ -1,7 +1,7 @@
 <div class="card">
     <h2 class="mb-2"><?= e(t('auth.register')) ?></h2>
     <?php if (empty($registrationOpen)): ?>
-        <div class="alert alert--info"><?= e('Yeni kayıtlar şu anda kapalı. Lütfen daha sonra tekrar deneyin.') ?></div>
+        <div class="alert alert--info"><?= e(__('Yeni kayıtlar şu anda kapalı. Lütfen daha sonra tekrar deneyin.')) ?></div>
     <?php else: ?>
     <form method="post" action="<?= e(url('/kayit')) ?>">
         <?= csrf_field() ?>

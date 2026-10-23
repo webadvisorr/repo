@@ -5,14 +5,18 @@ use App\Core\Uploader;
 $tabLabels = [
     'brand' => t('settings.tab_brand'), 'seo' => t('settings.tab_seo'), 'theme' => t('settings.tab_theme'),
     'preloader' => t('settings.tab_preloader'), 'site' => t('settings.tab_site'), 'mail' => t('settings.tab_mail'),
+    'reminders' => t('settings.tab_reminders'),
     'channels' => t('settings.tab_channels'), 'payment' => t('settings.tab_payment'),
+    'analytics' => t('settings.tab_analytics'), 'cookie' => t('settings.tab_cookie'),
+    'popup' => t('settings.tab_popup'), 'slider' => t('settings.tab_slider'), 'cta' => t('settings.tab_cta'),
+    'site_assistant' => t('settings.tab_site_assistant'),
 ];
 $definition = $schema[$tab] ?? [];
 $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'card', 'text', 'muted', 'border'];
 ?>
 <div class="row row--between mb-3">
     <h1 style="font-size:1.6rem;margin:0"><?= e(t('settings.title')) ?></h1>
-    <span class="muted" style="font-size:13px"><?= e('Tüm değişiklikler anında siteye yansır.') ?></span>
+    <span class="muted" style="font-size:13px"><?= e(__('Tüm değişiklikler anında siteye yansır.')) ?></span>
 </div>
 
 <div class="admin-tabs">
@@ -34,7 +38,7 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
                         <img src="<?= e(media_url($currentPath)) ?>" alt="<?= e(t('settings.' . $meta['label'])) ?>">
                         <div class="mono muted" style="font-size:12px;word-break:break-all"><?= e($currentPath) ?></div>
                     <?php else: ?>
-                        <span class="muted"><?= e('Yüklenmedi — varsayılan kullanılıyor.') ?></span>
+                        <span class="muted"><?= e(__('Yüklenmedi — varsayılan kullanılıyor.')) ?></span>
                     <?php endif; ?>
                 </div>
                 <form method="post" action="<?= e(url('/yonetim/ayarlar/medya-yukle')) ?>" enctype="multipart/form-data" class="row">
@@ -59,6 +63,90 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+
+<?php if ($tab === 'slider'): ?>
+    <div class="card mb-3">
+        <div class="row row--between" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:240px">
+                <h2 style="font-size:1.05rem">🖼️ <?= e(__('Slayt içerikleri')) ?></h2>
+                <p class="muted mb-0" style="font-size:13.5px">
+                    <?= e(__('Başlık, alt başlık, açıklama, buton yazısı, buton bağlantısı ve görsel Slider Yönetimi ekranında düzenlenir.')) ?>
+                </p>
+            </div>
+            <div class="row" style="gap:6px;flex-wrap:wrap">
+                <a class="btn btn-primary btn-sm" href="<?= e(url('/yonetim/slider/yeni')) ?>">+ <?= e(__('Yeni slayt')) ?></a>
+                <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/slider')) ?>"><?= e(__('Slider Yönetimi')) ?></a>
+            </div>
+        </div>
+
+        <?php if (empty($slides)): ?>
+            <div class="alert alert--info mt-2">
+                <span>ℹ️</span>
+                <div><?= e(__('Henüz slayt eklenmedi. “Yeni slayt” ile görsel ve metinleri ekleyin; aktif slayt yoksa ana sayfa varsayılan slaytları gösterir.')) ?></div>
+            </div>
+        <?php else: ?>
+            <div class="table-wrap mt-2">
+                <table class="data">
+                    <thead><tr><th><?= e(__('Görsel')) ?></th><th><?= e(__('Başlık')) ?></th><th><?= e(__('Buton')) ?></th><th><?= e(__('Durum')) ?></th><th></th></tr></thead>
+                    <tbody>
+                    <?php foreach ($slides as $slide): ?>
+                        <tr>
+                            <td>
+                                <?php if (!empty($slide['image_path'])): ?>
+                                    <img src="<?= e(media_url((string) $slide['image_path'])) ?>" alt="" style="width:76px;height:44px;object-fit:cover;border-radius:7px;border:1px solid var(--c-border)">
+                                <?php else: ?>
+                                    <span class="muted" style="font-size:12px"><?= e(__('Görsel yok')) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <strong><?= e((string) ($slide['title'] ?? '—')) ?></strong>
+                                <?php if (!empty($slide['subtitle'])): ?><div class="muted" style="font-size:12.5px"><?= e((string) $slide['subtitle']) ?></div><?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if (!empty($slide['button_text'])): ?>
+                                    <?= e((string) $slide['button_text']) ?>
+                                    <div class="muted mono" style="font-size:11.5px;word-break:break-all"><?= e((string) ($slide['button_url'] ?? '')) ?></div>
+                                <?php else: ?><span class="muted">—</span><?php endif; ?>
+                            </td>
+                            <td><span class="badge <?= (int) $slide['is_active'] === 1 ? 'badge--ok' : 'badge--info' ?>"><?= (int) $slide['is_active'] === 1 ? e(__('Yayında')) : e(__('Pasif')) ?></span></td>
+                            <td><a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/slider/' . (int) $slide['id'])) ?>"><?= e(__('Düzenle')) ?></a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($tab === 'site_assistant'): ?>
+    <?php $siteAiReady = \App\Services\SiteAssistant::configured(); ?>
+    <div class="card mb-3">
+        <div class="row row--between" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:240px">
+                <h2 style="font-size:1.05rem">✦ <?= e(__('Site asistanı (Gemini)')) ?></h2>
+                <p class="muted mb-0" style="font-size:13.5px">
+                    <?= e(__('Sitenin sol alt köşesindeki “Asistana sor” düğmesi ziyaretçilerle ilgilenir: siteyi tanıtır, paketleri ve araç indirimlerini anlatır, kayıt ve kullanım adımlarında yol gösterir.')) ?>
+                </p>
+            </div>
+            <span class="badge <?= $siteAiReady ? 'badge--ok' : 'badge--info' ?>" style="white-space:nowrap">
+                <?= $siteAiReady ? e(__('Yayında')) : e(__('Anahtar bekleniyor')) ?>
+            </span>
+        </div>
+        <ul class="muted" style="font-size:13px;line-height:1.7;margin:12px 0 0;padding-inline-start:20px">
+            <li><?= e(__('Google AI Studio üzerinden bir Gemini API anahtarı oluşturun ve aşağıdaki alana yapıştırın. Anahtar yalnızca sunucuda saklanır.')) ?></li>
+            <li><?= e(__('Önerilen model: gemini-3.6-flash. Daha ekonomik/hızlı yanıt için gemini-2.5-flash veya gemini-3.1-flash-lite da kullanılabilir.')) ?></li>
+            <li><?= e(__('Asistan, sohbet yanıtlarında “düşünme” adımını kapatır (thinkingBudget=0); bu yüzden yanıtlar genellikle 1-2 saniyede döner. Yanıt hiç gelmezse model adını kontrol edin.')) ?></li>
+            <li><?= e(__('Asistan fiyat ve indirim uydurmaz; paket bilgileri ve evrakların ücretsiz olduğu sistem rolünde tanımlıdır.')) ?></li>
+            <li><?= e(__('Oturum başına 10 dakikada en fazla 15 mesaj gönderilebilir; mesaj geçmişi yalnızca oturumda tutulur.')) ?></li>
+        </ul>
+        <p class="hint mt-2 mb-0">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"><?= e(__('Gemini API anahtarı al →')) ?></a>
+        </p>
+    </div>
+<?php endif; ?>
+
+
 
 <form method="post" action="<?= e(url('/yonetim/ayarlar/kaydet')) ?>">
     <?= csrf_field() ?>
@@ -96,6 +184,10 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
                                step="<?= e((string) ($meta['step'] ?? '1')) ?>" value="<?= e((string) Settings::get($key, '0')) ?>">
                     </div>
                 <?php endforeach; ?>
+
+                <?php if ($tab === 'payment'): ?>
+                    <p class="hint"><small class="muted"><?= e(t('settings.rates_hint')) ?></small></p>
+                <?php endif; ?>
 
                 <?php foreach (($definition['select'] ?? []) as $key => $meta): ?>
                     <div class="field">
@@ -157,7 +249,7 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
                     </div>
                 <?php endforeach; ?>
             </div>
-            <p class="hint mt-2"><?= e('Bu palet sitenin tamamında (butonlar, durum renkleri, arka plan) kullanılır.') ?></p>
+            <p class="hint mt-2"><?= e(__('Bu palet sitenin tamamında (butonlar, durum renkleri, arka plan) kullanılır.')) ?></p>
         </div>
     <?php endif; ?>
 
@@ -201,7 +293,7 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
 <?php if (!empty($definition['test'])): ?>
     <div class="card mt-3">
         <h2 style="font-size:1.05rem"><?= e(t('settings.smtp_test')) ?></h2>
-        <p class="muted"><?= e('Ayarları kaydettikten sonra bir test maili gönderin.') ?></p>
+        <p class="muted"><?= e(__('Ayarları kaydettikten sonra bir test maili gönderin.')) ?></p>
         <form method="post" action="<?= e(url('/yonetim/ayarlar/test-mail')) ?>" class="row">
             <?= csrf_field() ?>
             <input type="email" name="test_email" required placeholder="ornek@alanadi.com" style="flex:1;min-width:220px">
@@ -212,10 +304,10 @@ $colorNames = ['primary', 'accent', 'secondary', 'warning', 'danger', 'bg', 'car
 
 <?php if (!empty($media)): ?>
     <div class="card mt-3">
-        <h2 style="font-size:1.05rem"><?= e('Son yüklenen dosyalar') ?></h2>
+        <h2 style="font-size:1.05rem"><?= e(__('Son yüklenen dosyalar')) ?></h2>
         <div class="table-wrap">
             <table class="data">
-                <thead><tr><th><?= e('Dosya') ?></th><th><?= e('Tür') ?></th><th><?= e('Boyut') ?></th><th><?= e('Tarih') ?></th></tr></thead>
+                <thead><tr><th><?= e(__('Dosya')) ?></th><th><?= e(__('Tür')) ?></th><th><?= e(__('Boyut')) ?></th><th><?= e(__('Tarih')) ?></th></tr></thead>
                 <tbody>
                 <?php foreach ($media as $item): ?>
                     <tr>

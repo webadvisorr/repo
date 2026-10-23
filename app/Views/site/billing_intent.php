@@ -60,7 +60,7 @@ $declared = is_array($meta) && !empty($meta['declared']) ? $meta['declared'] : n
                     </div>
                 <?php endif; ?>
                 <?php if (!empty($bankNote)): ?>
-                    <p class="hint mt-2"><?= e((string) $bankNote) ?></p>
+                    <p class="hint mt-2"><?= e(__((string) $bankNote)) ?></p>
                 <?php endif; ?>
             </div>
 

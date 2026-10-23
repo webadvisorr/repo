@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 return [
     // ---- Marka ----
-    'brand.title'        => ['group' => 'brand', 'value' => 'evrako'],
+    'brand.title'        => ['group' => 'brand', 'value' => 'Evrako'],
     'brand.slogan'       => ['group' => 'brand', 'value' => 'Evrak bitişini asla kaçırma.'],
     'brand.logo_light'   => ['group' => 'brand', 'value' => ''],
     'brand.logo_dark'    => ['group' => 'brand', 'value' => ''],
@@ -28,8 +28,8 @@ return [
 
     // ---- SEO / meta ----
     'seo.meta_title'      => ['group' => 'seo', 'value' => 'evrako — Araç muayene, sigorta ve evrak takip sistemi'],
-    'seo.meta_description' => ['group' => 'seo', 'value' => 'Kıbrıs’ta araçlarınızın muayene, sigorta ve yol vergisi tarihlerini takip edin. Süresi dolmadan otomatik e-posta, SMS ve WhatsApp hatırlatması alın.'],
-    'seo.meta_keywords'   => ['group' => 'seo', 'value' => 'araç takip, muayene hatırlatma, sigorta bitiş tarihi, kıbrıs araç evrak, yol vergisi'],
+    'seo.meta_description' => ['group' => 'seo', 'value' => 'Kıbrıs’ta araçlarınızın muayene, sigorta ve seyrüsefer tarihlerini takip edin. Süresi dolmadan otomatik e-posta, SMS ve WhatsApp hatırlatması alın.'],
+    'seo.meta_keywords'   => ['group' => 'seo', 'value' => 'araç takip, muayene hatırlatma, sigorta bitiş tarihi, kıbrıs araç evrak, seyrüsefer'],
     'seo.og_title'        => ['group' => 'seo', 'value' => ''],
     'seo.og_description'  => ['group' => 'seo', 'value' => ''],
     'seo.og_type'         => ['group' => 'seo', 'value' => 'website'],
@@ -100,6 +100,14 @@ return [
     'smtp.reminder_hour' => ['group' => 'mail', 'value' => '08'],
     'smtp.daily_limit'   => ['group' => 'mail', 'value' => '500'],
 
+    // ---- Hatırlatma motoru (Faz 3) ----
+    'reminders.enabled'      => ['group' => 'reminders', 'value' => '1'],
+    'reminders.offsets'      => ['group' => 'reminders', 'value' => '7,3,1,0'],
+    'reminders.hour'         => ['group' => 'reminders', 'value' => '8'],
+    'reminders.daily_limit'  => ['group' => 'reminders', 'value' => '500'],
+    'reminders.batch'        => ['group' => 'reminders', 'value' => '50'],
+    'reminders.max_attempts' => ['group' => 'reminders', 'value' => '3'],
+
     // ---- Bildirim kanallari ----
     'channels.telegram_enabled'  => ['group' => 'channels', 'value' => '0'],
     'channels.telegram_bot_token'=> ['group' => 'channels', 'value' => ''],
@@ -122,4 +130,55 @@ return [
     'payment.min_topup'     => ['group' => 'payment', 'value' => '100'],
     'payment.topup_presets' => ['group' => 'payment', 'value' => [250, 500, 1000, 2500]],
     'payment.intent_ttl_hours' => ['group' => 'payment', 'value' => '72'],
+    // Görüntüleme para birimleri: 1 birim = kaç taban para (başlangıç değerleri, panelden güncellenir)
+    'payment.rate_usd'      => ['group' => 'payment', 'value' => '49.5652'],
+    'payment.rate_eur'      => ['group' => 'payment', 'value' => '55.7087'],
+    'payment.rate_gbp'      => ['group' => 'payment', 'value' => '66.0590'],
+
+    // ---- Slider (ana sayfa) ----
+    'slider.autoplay' => ['group' => 'slider', 'value' => '6500'],
+    'slider.kenburns' => ['group' => 'slider', 'value' => '1'],
+
+    // ---- Panel kullanım rehberi (API anahtarı boşken yerel mod) ----
+    'assistant.enabled'  => ['group' => 'assistant', 'value' => '1'],
+    'assistant.endpoint' => ['group' => 'assistant', 'value' => 'https://api.openai.com/v1/chat/completions'],
+    'assistant.model'    => ['group' => 'assistant', 'value' => 'gpt-4o-mini'],
+
+    // ---- Site asistanı (Gemini) — anahtar girilene kadar kapalı ----
+    'site_assistant.enabled'  => ['group' => 'site_assistant', 'value' => '0'],
+    'site_assistant.model'    => ['group' => 'site_assistant', 'value' => 'gemini-3.6-flash'],
+    'site_assistant.greeting' => ['group' => 'site_assistant', 'value' => 'Merhaba! Ben evrako’nun dijital danışmanıyım. Araç evraklarınızı nasıl takip edebileceğinizi, paketleri ve fiyatları anlatabilirim. Nasıl yardımcı olabilirim?'],
+    'site_assistant.persona'  => ['group' => 'site_assistant', 'value' => ''],
+
+    // ---- Sabit CTA (alt bant) ----
+    'sticky_cta.enabled'     => ['group' => 'cta', 'value' => '1'],
+    'sticky_cta.text'        => ['group' => 'cta', 'value' => 'Araç evraklarınızı ücretsiz takip edin, süresi dolmadan uyarı alın.'],
+    'sticky_cta.button_text' => ['group' => 'cta', 'value' => 'Ücretsiz başla'],
+    'sticky_cta.button_url'  => ['group' => 'cta', 'value' => ''],
+
+    // ---- Çerez bildirimi (KVKK) ----
+    'cookie.enabled'       => ['group' => 'cookie', 'value' => '1'],
+    'cookie.title'         => ['group' => 'cookie', 'value' => 'Çerez kullanımı'],
+    'cookie.text'          => ['group' => 'cookie', 'value' => 'Deneyiminizi iyileştirmek ve site trafiğini ölçmek için çerezler kullanıyoruz. Zorunlu çerezler sitenin çalışması için gereklidir; diğerlerini siz seçersiniz.'],
+    'cookie.accept_label'  => ['group' => 'cookie', 'value' => 'Tümünü kabul et'],
+    'cookie.decline_label' => ['group' => 'cookie', 'value' => 'Sadece zorunlu'],
+    'cookie.link'          => ['group' => 'cookie', 'value' => '/gizlilik'],
+
+    // ---- Duyuru popup ----
+    'popup.enabled'     => ['group' => 'popup', 'value' => '0'],
+    'popup.title'       => ['group' => 'popup', 'value' => ''],
+    'popup.text'        => ['group' => 'popup', 'value' => ''],
+    'popup.image'       => ['group' => 'popup', 'value' => ''],
+    'popup.button_text' => ['group' => 'popup', 'value' => ''],
+    'popup.button_url'  => ['group' => 'popup', 'value' => ''],
+    'popup.delay'       => ['group' => 'popup', 'value' => '3'],
+    'popup.frequency'   => ['group' => 'popup', 'value' => 'session'],
+
+    // ---- Analitik / ölçümleme ----
+    'analytics.enabled'          => ['group' => 'analytics', 'value' => '0'],
+    'analytics.provider'         => ['group' => 'analytics', 'value' => 'ga4'],
+    'analytics.ga_id'            => ['group' => 'analytics', 'value' => ''],
+    'analytics.plausible_domain' => ['group' => 'analytics', 'value' => ''],
+    'analytics.custom_script'    => ['group' => 'analytics', 'value' => ''],
+    'analytics.consent_required' => ['group' => 'analytics', 'value' => '1'],
 ];

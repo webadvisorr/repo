@@ -97,7 +97,7 @@ final class SettingsController extends Controller
             ],
             'text' => [
                 'site.maintenance_text' => ['label' => 'maintenance_text', 'max' => 500, 'textarea' => true],
-                'site.reminder_offsets' => ['label' => 'reminder_offsets', 'max' => 60],
+                'site.default_reminder_offsets' => ['label' => 'reminder_offsets', 'max' => 60],
             ],
             'number' => [
                 'site.trial_days' => ['label' => 'trial_days', 'min' => 0, 'max' => 365],
@@ -122,6 +122,20 @@ final class SettingsController extends Controller
             ],
             'test' => true,
         ],
+        'reminders' => [
+            'bool' => [
+                'reminders.enabled' => ['label' => 'reminders_enabled'],
+            ],
+            'text' => [
+                'reminders.offsets' => ['label' => 'reminders_offsets', 'max' => 60],
+            ],
+            'number' => [
+                'reminders.hour'         => ['label' => 'reminders_hour', 'min' => 0, 'max' => 23, 'step' => '1'],
+                'reminders.daily_limit'  => ['label' => 'reminders_daily_limit', 'min' => 1, 'max' => 100000, 'step' => '10'],
+                'reminders.batch'        => ['label' => 'reminders_batch', 'min' => 1, 'max' => 500, 'step' => '5'],
+                'reminders.max_attempts' => ['label' => 'reminders_max_attempts', 'min' => 1, 'max' => 10, 'step' => '1'],
+            ],
+        ],
         'channels' => [
             'bool' => [
                 'channels.telegram_enabled' => ['label' => 'channels_telegram'],
@@ -145,6 +159,11 @@ final class SettingsController extends Controller
             'number' => [
                 'payment.min_topup'        => ['label' => 'min_topup', 'min' => 1, 'max' => 100000, 'step' => '0.01'],
                 'payment.intent_ttl_hours' => ['label' => 'intent_ttl', 'min' => 1, 'max' => 720],
+                // Ziyaretçi başka bir para birimi seçtiğinde fiyatlar bunlarla çevrilir
+                // (1 birim = kaç taban para). 0 = o birim seçicide gösterilmez.
+                'payment.rate_usd'         => ['label' => 'rate_usd', 'min' => 0, 'max' => 100000, 'step' => '0.0001'],
+                'payment.rate_eur'         => ['label' => 'rate_eur', 'min' => 0, 'max' => 100000, 'step' => '0.0001'],
+                'payment.rate_gbp'         => ['label' => 'rate_gbp', 'min' => 0, 'max' => 100000, 'step' => '0.0001'],
             ],
             'text' => [
                 'payment.bank_note'      => ['label' => 'bank_note', 'max' => 255, 'textarea' => true],
@@ -159,6 +178,96 @@ final class SettingsController extends Controller
             ],
             'bank_accounts' => true,
         ],
+        'analytics' => [
+            'bool' => [
+                'analytics.enabled'          => ['label' => 'analytics_enabled'],
+                'analytics.consent_required' => ['label' => 'analytics_consent'],
+            ],
+            'select' => [
+                'analytics.provider' => ['label' => 'analytics_provider', 'options' => ['ga4', 'plausible', 'custom']],
+            ],
+            'text' => [
+                'analytics.ga_id'            => ['label' => 'analytics_ga_id', 'max' => 40],
+                'analytics.plausible_domain' => ['label' => 'analytics_plausible', 'max' => 190],
+                'analytics.custom_script'    => ['label' => 'analytics_custom', 'max' => 4000, 'textarea' => true],
+            ],
+        ],
+        'cookie' => [
+            'bool' => [
+                'cookie.enabled' => ['label' => 'cookie_enabled'],
+            ],
+            'text' => [
+                'cookie.title'         => ['label' => 'cookie_title', 'max' => 80],
+                'cookie.text'          => ['label' => 'cookie_text', 'max' => 600, 'textarea' => true],
+                'cookie.accept_label'  => ['label' => 'cookie_accept', 'max' => 40],
+                'cookie.decline_label' => ['label' => 'cookie_decline', 'max' => 40],
+                'cookie.link'          => ['label' => 'cookie_link', 'max' => 190],
+            ],
+        ],
+        'popup' => [
+            'media' => [
+                'popup.image' => ['label' => 'popup_image', 'kind' => 'og'],
+            ],
+            'bool' => [
+                'popup.enabled' => ['label' => 'popup_enabled'],
+            ],
+            'text' => [
+                'popup.title'       => ['label' => 'popup_title', 'max' => 120],
+                'popup.text'        => ['label' => 'popup_text', 'max' => 600, 'textarea' => true],
+                'popup.button_text' => ['label' => 'popup_button_text', 'max' => 60],
+                'popup.button_url'  => ['label' => 'popup_button_url', 'max' => 190],
+            ],
+            'number' => [
+                'popup.delay' => ['label' => 'popup_delay', 'min' => 0, 'max' => 120, 'step' => '1'],
+            ],
+            'select' => [
+                'popup.frequency' => ['label' => 'popup_frequency', 'options' => ['session', 'always', 'week']],
+            ],
+        ],
+        'slider' => [
+            'number' => [
+                'slider.autoplay' => ['label' => 'slider_autoplay', 'min' => 2000, 'max' => 20000, 'step' => '500'],
+            ],
+            'bool' => [
+                'slider.kenburns' => ['label' => 'slider_kenburns'],
+            ],
+        ],
+        'cta' => [
+            'bool' => [
+                'sticky_cta.enabled' => ['label' => 'sticky_enabled'],
+            ],
+            'text' => [
+                'sticky_cta.text'        => ['label' => 'sticky_text', 'max' => 160],
+                'sticky_cta.button_text' => ['label' => 'sticky_button_text', 'max' => 60],
+                'sticky_cta.button_url'  => ['label' => 'sticky_button_url', 'max' => 190],
+            ],
+        ],
+        // Panel kullanım rehberi: yerel mod + isteğe bağlı OpenAI uyumlu AI uç noktası.
+        'assistant' => [
+            'bool' => [
+                'assistant.enabled' => ['label' => 'assistant_enabled'],
+            ],
+            'text' => [
+                'assistant.endpoint' => ['label' => 'assistant_endpoint', 'max' => 190],
+                'assistant.model'    => ['label' => 'assistant_model', 'max' => 80],
+            ],
+            'password' => [
+                'assistant.api_key' => ['label' => 'assistant_api_key'],
+            ],
+        ],
+        'site_assistant' => [
+            'bool' => [
+                'site_assistant.enabled' => ['label' => 'site_assistant_enabled'],
+            ],
+            'text' => [
+                'site_assistant.model'    => ['label' => 'site_assistant_model', 'max' => 80],
+                'site_assistant.greeting' => ['label' => 'site_assistant_greeting', 'max' => 400, 'textarea' => true],
+                'site_assistant.persona'  => ['label' => 'site_assistant_persona', 'max' => 1200, 'textarea' => true],
+            ],
+            'password' => [
+                'site_assistant.api_key' => ['label' => 'site_assistant_api_key'],
+            ],
+        ],
     ];
 
     /** PHP, form alan adlarindaki noktayi alt cizgiye cevirir (brand.title -> brand_title). */
@@ -169,7 +278,7 @@ final class SettingsController extends Controller
 
     public function index(string $tab = 'brand'): string
     {
-        $tabs = array_keys(self::SCHEMA);
+        $tabs = array_values(array_filter(array_keys(self::SCHEMA), static fn (string $key): bool => $key !== 'assistant'));
         if (!in_array($tab, $tabs, true)) {
             $tab = 'brand';
         }
@@ -181,6 +290,9 @@ final class SettingsController extends Controller
             'schema' => self::SCHEMA,
             'colors' => (array) Settings::get('theme.colors', []),
             'media'  => $this->mediaList(),
+            'slides' => $tab === 'slider'
+                ? Database::select('SELECT id, title, subtitle, button_text, button_url, image_path, is_active, sort_order FROM slides ORDER BY sort_order ASC, id ASC')
+                : [],
         ]);
     }
 
@@ -358,7 +470,7 @@ final class SettingsController extends Controller
             $this->redirect('/yonetim/ayarlar/mail');
         }
 
-        $brand = (string) Settings::get('brand.title', 'evrako');
+        $brand = (string) Settings::get('brand.title', 'Evrako');
         $html = '<div style="font-family:Arial,sans-serif;font-size:15px;color:#0F172A">'
             . '<h2 style="color:#0A1D3A">' . e($brand) . ' — SMTP testi</h2>'
             . '<p>Bu e-posta, panelde girdiğiniz SMTP ayarlarının çalıştığını doğrulamak için gönderildi.</p>'

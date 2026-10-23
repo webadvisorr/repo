@@ -36,6 +36,21 @@ final class BillingController extends Controller
             [$orgId]
         ) : [];
 
+        $current = $orgId ? SubscriptionService::current($orgId) : null;
+        $plans = array_values(array_filter(
+            SubscriptionService::plans(true),
+            static fn (array $plan): bool => in_array((string) $plan['key'], ['trial', 'standard'], true)
+        ));
+        $trialUsed = $orgId
+            ? (int) Database::scalar(
+                "SELECT COUNT(*) FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.organization_id = ? AND p.`key` = 'trial'",
+                [$orgId]
+            )
+            : 0;
+        $isStandard = $current !== null
+            && (string) $current['plan_key'] === 'standard'
+            && in_array((string) $current['status'], ['active', 'trialing'], true);
+
         return $this->view('site/billing_checkout', [
             'title'        => t('billing.title'),
             'orgId'        => $orgId,
@@ -43,13 +58,17 @@ final class BillingController extends Controller
             'currency'     => PaymentService::currency(),
             'presets'      => PaymentService::presets(),
             'minTopup'     => PaymentService::minTopup(),
-            'plans'        => SubscriptionService::plans(true),
-            'current'      => $orgId ? SubscriptionService::current($orgId) : null,
+            'plans'        => $plans,
+            'current'      => $current,
+            'trialUsed'    => $trialUsed,
+            'isStandard'   => $isStandard,
             'accounts'     => PaymentService::bankAccounts(),
             'bankNote'     => (string) Settings::get('payment.bank_note', ''),
             'bankEnabled'  => PaymentService::bankEnabled(),
             'pending'      => $pending,
             'summary'      => $orgId ? PaymentService::summary($orgId) : ['paid' => 0.0, 'pending' => 0.0, 'count' => 0],
+            // Kredi yetersizliğinden dönen müşteriye yükleme alanını öne çıkar.
+            'focusCredit'  => (string) $this->request->input('kredi', '') === '1',
         ]);
     }
 
@@ -85,8 +104,86 @@ final class BillingController extends Controller
             $this->flashError((string) $result['error']);
             $this->redirect('/panel/odeme');
         }
-        $this->flashSuccess(t('billing.intent_created'));
+        $this->flashSuccess('Paket seçiminiz alındı. Havale bilgilerinizi aşağıda bulabilirsiniz; ödeme bildiriminiz yönetime iletildi.');
         $this->redirect('/panel/odeme/talep/' . (int) $result['payment_id']);
+    }
+
+    /** Ücretsiz denemeyi başlatır (daha önce kullanılmadıysa). */
+    public function startTrial(): void
+    {
+        $orgId = $this->organizationId();
+        if ($orgId === null) {
+            $this->flashError(t('billing.error_org'));
+            $this->redirect('/panel/odeme');
+        }
+        $plan = Database::first("SELECT * FROM plans WHERE `key` = 'trial' AND is_active = 1 LIMIT 1");
+        if ($plan === null) {
+            $this->flashError('Deneme paketi şu anda kullanılamıyor.');
+            $this->redirect('/panel/odeme');
+        }
+        $current = SubscriptionService::current($orgId);
+        if ($current !== null && (string) $current['plan_key'] === 'standard' && in_array((string) $current['status'], ['active', 'trialing'], true)) {
+            $this->flashSuccess('Zaten Standart Paket kullanıyorsunuz; deneme başlatmaya gerek yok.');
+            $this->redirect('/panel/odeme');
+        }
+        $used = (int) Database::scalar(
+            "SELECT COUNT(*) FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.organization_id = ? AND p.`key` = 'trial'",
+            [$orgId]
+        );
+        if ($current !== null && (string) $current['plan_key'] === 'trial' && in_array((string) $current['status'], ['trialing', 'active'], true)) {
+            $this->flashSuccess('Ücretsiz deneme paketiniz zaten aktif.');
+            $this->redirect('/panel/odeme');
+        }
+        if ($used > 0) {
+            $this->flashError('Ücretsiz deneme daha önce kullanıldı. Standart Paket ile devam edebilirsiniz.');
+            $this->redirect('/panel/odeme');
+        }
+
+        $days = max(1, (int) ($plan['trial_days'] ?? 180));
+        $result = SubscriptionService::assign($orgId, (int) $plan['id'], [
+            'trial_days' => $days,
+            'note'       => 'Müşteri panelinden ücretsiz deneme başlatıldı.',
+        ]);
+        if (!$result['ok']) {
+            $this->flashError((string) ($result['error'] ?? 'Deneme başlatılamadı.'));
+            $this->redirect('/panel/odeme');
+        }
+        $this->flashSuccess($days . ' günlük ücretsiz denemeniz başladı. Evraklarınızı eklemeye hemen başlayabilirsiniz.');
+        $this->redirect('/panel/odeme');
+    }
+
+    /** Aboneliği kredi bakiyesinden satın alır / yeniler (aylık veya yıllık). */
+    public function payWithCredit(): void
+    {
+        $orgId = $this->organizationId();
+        if ($orgId === null) {
+            $this->flashError(t('billing.error_org'));
+            $this->redirect('/panel/odeme');
+        }
+
+        $planId = $this->request->int('plan_id');
+        $interval = (string) $this->request->input('interval', 'month');
+        $result = SubscriptionService::purchase($orgId, $planId, $interval, 'credit');
+
+        if (!$result['ok']) {
+            $message = (string) $result['error'];
+            $shortfall = (float) ($result['shortfall'] ?? 0);
+            if ($shortfall > 0) {
+                $message .= ' ' . t('billing.credit_shortfall', [
+                    'shortfall' => number_format($shortfall, 2, ',', '.'),
+                    'currency'  => PaymentService::currency(),
+                ]);
+            }
+            $this->flashError($message);
+            $this->redirect('/panel/odeme' . ($shortfall > 0 ? '?kredi=1' : ''));
+        }
+
+        $this->flashSuccess(t('billing.credit_paid', [
+            'date'     => format_date((string) $result['period_end']),
+            'balance'  => number_format((float) ($result['balance'] ?? 0), 2, ',', '.'),
+            'currency' => PaymentService::currency(),
+        ]));
+        $this->redirect('/panel/odeme');
     }
 
     /** Havale talimat sayfası: ödeme kodu + IBAN listesi + bildirim formu. */

@@ -26,9 +26,13 @@ final class Mailer
     private $socket = null;
     private array $transcript = [];
 
+    /**
+     * @param array|null $config Yalnızca geçersiz kılınacak alanlar verilebilir
+     *                           (ör. ['timeout' => 6]); diğerleri ayarlardan okunur.
+     */
     public function __construct(?array $config = null)
     {
-        $config ??= [
+        $config = array_merge([
             'host'       => (string) Settings::get('smtp.host', ''),
             'port'       => (int) Settings::get('smtp.port', 587),
             'encryption' => (string) Settings::get('smtp.encryption', 'tls'),
@@ -36,8 +40,9 @@ final class Mailer
             'password'   => (string) Settings::get('smtp.password', ''),
             'auth'       => (bool) Settings::get('smtp.auth', true),
             'from_email' => (string) Settings::get('smtp.from_email', ''),
-            'from_name'  => (string) Settings::get('smtp.from_name', (string) Settings::get('brand.title', 'evrako')),
-        ];
+            'from_name'  => (string) Settings::get('smtp.from_name', (string) Settings::get('brand.title', 'Evrako')),
+            'timeout'    => (int) Config::get('mail.timeout', 20),
+        ], $config ?? []);
         $this->host = (string) ($config['host'] ?? '');
         $this->port = (int) ($config['port'] ?? 587);
         $this->encryption = strtolower((string) ($config['encryption'] ?? 'tls'));
@@ -46,7 +51,7 @@ final class Mailer
         $this->smtpAuth = (bool) ($config['auth'] ?? true);
         $this->fromEmail = (string) ($config['from_email'] ?? $this->username);
         $this->fromName = (string) ($config['from_name'] ?? '');
-        $this->timeout = (int) Config::get('mail.timeout', 20);
+        $this->timeout = max(3, (int) ($config['timeout'] ?? 20));
     }
 
     public function isConfigured(): bool
@@ -65,6 +70,11 @@ final class Mailer
             return ['ok' => false, 'error' => 'Gecersiz alici adresi'];
         }
         if (!$this->isConfigured()) {
+            // Geliştirme modu: SMTP yoksa maili dosyaya yaz (config: mail.dev_log).
+            if ((bool) Config::get('mail.dev_log', false)) {
+                $this->writeDevLog($toEmail, $subject, $htmlBody, $textBody);
+                return ['ok' => true, 'dev' => true];
+            }
             return ['ok' => false, 'error' => 'SMTP ayarlari eksik (host / gonderen adresi)'];
         }
 
@@ -119,6 +129,21 @@ final class Mailer
         $data = implode("\r\n", $head) . "\r\n" . $body;
 
         return $this->deliver($toEmail, $data);
+    }
+
+    /** SMTP yokken geliştirme ortamında maili storage/logs/mail.log'a yazar. */
+    private function writeDevLog(string $toEmail, string $subject, string $htmlBody, ?string $textBody): void
+    {
+        $dir = BASE_PATH . '/storage/logs';
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return;
+        }
+        $entry = "\n===== " . date('Y-m-d H:i:s') . " =====\n"
+            . 'To: ' . $toEmail . "\n"
+            . 'Subject: ' . $subject . "\n"
+            . "\n--- text/plain ---\n" . ($textBody ?? '')
+            . "\n--- text/html ---\n" . $htmlBody . "\n";
+        @file_put_contents($dir . '/mail.log', $entry, FILE_APPEND | LOCK_EX);
     }
 
     private function deliver(string $toEmail, string $data): array

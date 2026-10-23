@@ -37,6 +37,12 @@ final class SystemController extends Controller
             'diskFree'      => @disk_free_space(BASE_PATH) ?: 0,
             'storageSize'   => $this->dirSize(BASE_PATH . '/storage/uploads'),
             'logSize'       => $this->dirSize(BASE_PATH . '/storage/logs'),
+            'reminders'     => \App\Services\ReminderService::stats(),
+            'reminderReady' => \App\Services\ReminderService::enabled(),
+            'pendingQueue'  => \App\Services\ReminderService::pendingCount(),
+            'sentToday'     => \App\Services\ReminderService::sentToday(),
+            'dailyLimit'    => \App\Services\ReminderService::dailyLimit(),
+            'templateCount' => (int) Database::scalar('SELECT COUNT(*) FROM mail_templates'),
         ]);
     }
 
@@ -58,20 +64,16 @@ final class SystemController extends Controller
         $this->redirect('/yonetim/sistem');
     }
 
-    /** Abonelik süresi geçenleri kapatır ve hatırlatma motorunu tetikler (cron). */
+    /** Abonelik süresi geçenleri kapatır, ödeme taleplerini kapatır ve hatırlatma motorunu tetikler (cron). */
     public function runCron(): void
     {
-        $expired = \App\Services\SubscriptionService::expireOverdue();
-        $expiredIntents = \App\Services\PaymentService::expireStale();
-
-        $reminderResult = ['created' => 0, 'sent' => 0, 'failed' => 0];
-        if (is_file(BASE_PATH . '/app/Services/ReminderService.php')) {
-            $reminderResult = \App\Services\ReminderService::run();
-        }
-
-        \App\Core\Audit::log('system.cron_manual', 'system', null, ['expired' => $expired, 'expired_intents' => $expiredIntents] + $reminderResult);
-        $this->flashSuccess(sprintf('Cron çalıştı. Süresi geçen abonelik: %d · Süresi geçen ödeme talebi: %d · Oluşturulan bildirim: %d · Gönderilen: %d · Hata: %d',
-            $expired, $expiredIntents, $reminderResult['created'], $reminderResult['sent'], $reminderResult['failed']));
+        $result = \App\Services\CronService::runDaily();
+        \App\Core\Audit::log('system.cron_manual', 'system', null, [
+            'created' => (int) $result['reminders']['created'],
+            'sent'    => (int) $result['reminders']['sent'],
+            'failed'  => (int) $result['reminders']['failed'],
+        ]);
+        $this->flashSuccess('Cron çalıştı. ' . \App\Services\CronService::summary($result));
         $this->redirect('/yonetim/sistem');
     }
 

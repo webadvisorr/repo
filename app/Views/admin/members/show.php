@@ -26,8 +26,8 @@ foreach ($payments as $p) {
         </p>
     </div>
     <div class="row">
-        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/odemeler?q=' . urlencode((string) $member['email']))) ?>"><?= e('Ödemeler') ?></a>
-        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler?q=' . urlencode((string) $member['email']))) ?>"><?= e('Listede bul') ?></a>
+        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/odemeler?q=' . urlencode((string) $member['email']))) ?>"><?= e(__('Ödemeler')) ?></a>
+        <a class="btn btn-outline btn-sm" href="<?= e(url('/yonetim/uyeler?q=' . urlencode((string) $member['email']))) ?>"><?= e(__('Listede bul')) ?></a>
     </div>
 </div>
 
@@ -43,16 +43,16 @@ foreach ($payments as $p) {
             <?= !empty($subscription['current_period_end']) ? ' · ' . e(format_date((string) $subscription['current_period_end'])) : '' ?>
         </div>
     </div>
-    <div class="card stat"><div class="stat__value"><?= count($vehicles) ?></div><div class="stat__label"><?= e('Araç') ?></div></div>
+    <div class="card stat"><div class="stat__value"><?= count($vehicles) ?></div><div class="stat__label"><?= e(__('Araç')) ?></div></div>
     <div class="card stat"><div class="stat__value"><?= e(number_format($totalPaid, 2, ',', '.')) ?></div><div class="stat__label"><?= e('Tahsil edilen (' . $currency . ')') ?></div></div>
 </div>
 
 <div class="grid grid-2 mb-3">
     <!-- ================= KREDİ ================= -->
     <div class="card">
-        <h2 style="font-size:1.1rem">💰 <?= e('Kredi yönetimi') ?></h2>
+        <h2 style="font-size:1.1rem">💰 <?= e(__('Kredi yönetimi')) ?></h2>
         <p class="muted" style="font-size:13.5px">
-            <?= e('Krediyi SMS paketi, ek araç veya abonelik ödemesi için kullanabilirsiniz. Her hareket kayıt altına alınır.') ?>
+            <?= e(__('Krediyi SMS paketi, ek araç veya abonelik ödemesi için kullanabilirsiniz. Her hareket kayıt altına alınır.')) ?>
         </p>
 
         <form method="post" action="<?= e(url('/yonetim/uyeler/kredi-ekle')) ?>" class="mb-2">
@@ -64,7 +64,7 @@ foreach ($payments as $p) {
                     <input id="credit-amount" type="number" name="amount" step="0.01" min="0.01" max="100000" required value="100">
                 </div>
                 <div class="field">
-                    <label for="credit-reason"><?= e('Kaynak / gerekçe') ?></label>
+                    <label for="credit-reason"><?= e(__('Kaynak / gerekçe')) ?></label>
                     <select id="credit-reason" name="reason">
                         <?php foreach (['manual' => 'Manuel ekleme', 'bank_transfer' => 'Havale / EFT', 'cash' => 'Nakit', 'card' => 'Kredi kartı', 'bonus' => 'Bonus / promosyon', 'refund' => 'İade', 'correction' => 'Düzeltme'] as $key => $label): ?>
                             <option value="<?= e($key) ?>"><?= e($label) ?></option>
@@ -73,38 +73,38 @@ foreach ($payments as $p) {
                 </div>
             </div>
             <div class="field">
-                <label for="credit-note"><?= e('Not') ?> <span class="muted">(<?= e(t('common.optional')) ?>)</span></label>
-                <input id="credit-note" type="text" name="note" maxlength="250" placeholder="<?= e('Örn. 3 aylık SMS paketi bedeli') ?>">
+                <label for="credit-note"><?= e(__('Not')) ?> <span class="muted">(<?= e(t('common.optional')) ?>)</span></label>
+                <input id="credit-note" type="text" name="note" maxlength="250" placeholder="<?= e(__('Örn. 3 aylık SMS paketi bedeli')) ?>">
             </div>
-            <button class="btn btn-accent" type="submit"><?= e('Kredi ekle') ?></button>
+            <button class="btn btn-accent" type="submit"><?= e(__('Kredi ekle')) ?></button>
         </form>
 
         <details>
-            <summary class="muted" style="cursor:pointer;font-size:13.5px"><?= e('Kredi düş / düzeltme') ?></summary>
-            <form method="post" action="<?= e(url('/yonetim/uyeler/kredi-dus')) ?>" class="mt-2" data-confirm="<?= e('Kredi düşülecek. Onaylıyor musunuz?') ?>">
+            <summary class="muted" style="cursor:pointer;font-size:13.5px"><?= e(__('Kredi düş / düzeltme')) ?></summary>
+            <form method="post" action="<?= e(url('/yonetim/uyeler/kredi-dus')) ?>" class="mt-2" data-confirm="<?= e(__('Kredi düşülecek. Onaylıyor musunuz?')) ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="user_id" value="<?= (int) $member['id'] ?>">
                 <div class="field-grid">
                     <div class="field">
-                        <label for="debit-amount"><?= e('Düşülecek tutar') ?></label>
+                        <label for="debit-amount"><?= e(__('Düşülecek tutar')) ?></label>
                         <input id="debit-amount" type="number" name="amount" step="0.01" min="0.01" max="100000" required>
                     </div>
                     <div class="field">
-                        <label for="debit-note"><?= e('Gerekçe / not') ?></label>
+                        <label for="debit-note"><?= e(__('Gerekçe / not')) ?></label>
                         <input id="debit-note" type="text" name="note" maxlength="250">
                     </div>
                 </div>
-                <button class="btn btn-outline btn-sm" type="submit" style="color:var(--c-danger);border-color:var(--c-danger)"><?= e('Kredi düş') ?></button>
+                <button class="btn btn-outline btn-sm" type="submit" style="color:var(--c-danger);border-color:var(--c-danger)"><?= e(__('Kredi düş')) ?></button>
             </form>
         </details>
 
-        <h3 class="mt-3" style="font-size:1rem"><?= e('Kredi hareketleri') ?></h3>
+        <h3 class="mt-3" style="font-size:1rem"><?= e(__('Kredi hareketleri')) ?></h3>
         <?php if (empty($ledger)): ?>
-            <p class="muted mb-0" style="font-size:14px"><?= e('Henüz kredi hareketi yok.') ?></p>
+            <p class="muted mb-0" style="font-size:14px"><?= e(__('Henüz kredi hareketi yok.')) ?></p>
         <?php else: ?>
             <div class="table-wrap">
                 <table class="data">
-                    <thead><tr><th><?= e('Tarih') ?></th><th><?= e('İşlem') ?></th><th><?= e('Tutar') ?></th><th><?= e('Bakiye') ?></th><th><?= e('Yetkili') ?></th></tr></thead>
+                    <thead><tr><th><?= e(__('Tarih')) ?></th><th><?= e(__('İşlem')) ?></th><th><?= e(__('Tutar')) ?></th><th><?= e(__('Bakiye')) ?></th><th><?= e(__('Yetkili')) ?></th></tr></thead>
                     <tbody>
                     <?php foreach ($ledger as $row): ?>
                         <tr>
@@ -128,7 +128,7 @@ foreach ($payments as $p) {
 
     <!-- ================= ABONELİK ================= -->
     <div class="card">
-        <h2 style="font-size:1.1rem">💳 <?= e('Abonelik yönetimi') ?></h2>
+        <h2 style="font-size:1.1rem">💳 <?= e(__('Abonelik yönetimi')) ?></h2>
 
         <?php if ($subscription !== null): ?>
             <div class="media-preview mb-2" style="flex-direction:column;align-items:flex-start;gap:6px">
@@ -139,8 +139,11 @@ foreach ($payments as $p) {
                 </div>
                 <div class="muted" style="font-size:13px">
                     <?= e('Dönem: ' . format_date((string) $subscription['current_period_start']) . ' → ' . format_date((string) $subscription['current_period_end'])) ?>
+                    <?php $subInterval = (string) ($subscription['billing_interval'] ?? 'month'); ?>
+                    <?php $subPrice = (float) ($subscription['price_at_signup'] ?? \App\Services\SubscriptionService::priceFor($subscription, $subInterval)); ?>
+                    <br><?= e(t('billing.interval') . ': ' . t('billing.interval_' . $subInterval) . ' · ' . number_format($subPrice, 2, ',', '.') . ' ' . $currency) ?>
                     <?php if ((int) $subscription['cancel_at_period_end'] === 1): ?>
-                        <br><strong style="color:var(--c-warning)"><?= e('Dönem sonunda iptal edilecek.') ?></strong>
+                        <br><strong style="color:var(--c-warning)"><?= e(__('Dönem sonunda iptal edilecek.')) ?></strong>
                     <?php endif; ?>
                     <br><?= e('Limitler: ' . (int) $subscription['max_vehicles'] . ' araç · ' . (int) $subscription['max_users'] . ' kullanıcı · ' . strtoupper((string) $subscription['channels'])) ?>
                 </div>
@@ -151,16 +154,16 @@ foreach ($payments as $p) {
                     <?= csrf_field() ?>
                     <input type="hidden" name="user_id" value="<?= (int) $member['id'] ?>">
                     <input type="hidden" name="subscription_id" value="<?= (int) $subscription['id'] ?>">
-                    <input type="number" name="days" value="30" min="1" max="3650" style="width:92px" aria-label="<?= e('Gün') ?>">
+                    <input type="number" name="days" value="30" min="1" max="3650" style="width:92px" aria-label="<?= e(__('Gün')) ?>">
                     <label class="check" style="align-items:center">
                         <input type="checkbox" name="mark_paid" value="1" checked>
-                        <span style="font-size:13px"><?= e('Ödemeyi kaydet') ?></span>
+                        <span style="font-size:13px"><?= e(__('Ödemeyi kaydet')) ?></span>
                     </label>
-                    <button class="btn btn-primary btn-sm" type="submit"><?= e('Süre uzat') ?></button>
+                    <button class="btn btn-primary btn-sm" type="submit"><?= e(__('Süre uzat')) ?></button>
                 </form>
             </div>
             <div class="row mb-2">
-                <form method="post" action="<?= e(url('/yonetim/uyeler/kredi-ile-ode')) ?>" data-confirm="<?= e('Abonelik kredi bakiyesinden ödenecek. Onaylıyor musunuz?') ?>">
+                <form method="post" action="<?= e(url('/yonetim/uyeler/kredi-ile-ode')) ?>" data-confirm="<?= e(__('Abonelik kredi bakiyesinden ödenecek. Onaylıyor musunuz?')) ?>">
                     <?= csrf_field() ?>
                     <input type="hidden" name="user_id" value="<?= (int) $member['id'] ?>">
                     <input type="hidden" name="subscription_id" value="<?= (int) $subscription['id'] ?>">
@@ -173,54 +176,75 @@ foreach ($payments as $p) {
                         <?= csrf_field() ?>
                         <input type="hidden" name="user_id" value="<?= (int) $member['id'] ?>">
                         <input type="hidden" name="subscription_id" value="<?= (int) $subscription['id'] ?>">
-                        <button class="btn btn-outline btn-sm" type="submit"><?= e('İptali geri al') ?></button>
+                        <button class="btn btn-outline btn-sm" type="submit"><?= e(__('İptali geri al')) ?></button>
                     </form>
                 <?php else: ?>
-                    <form method="post" action="<?= e(url('/yonetim/uyeler/abonelik-iptal')) ?>" data-confirm="<?= e('Abonelik dönem sonunda iptal edilecek. Onaylıyor musunuz?') ?>">
+                    <form method="post" action="<?= e(url('/yonetim/uyeler/abonelik-iptal')) ?>" data-confirm="<?= e(__('Abonelik dönem sonunda iptal edilecek. Onaylıyor musunuz?')) ?>">
                         <?= csrf_field() ?>
                         <input type="hidden" name="user_id" value="<?= (int) $member['id'] ?>">
                         <input type="hidden" name="subscription_id" value="<?= (int) $subscription['id'] ?>">
-                        <button class="btn btn-outline btn-sm" type="submit"><?= e('Dönem sonunda iptal') ?></button>
+                        <button class="btn btn-outline btn-sm" type="submit"><?= e(__('Dönem sonunda iptal')) ?></button>
                     </form>
-                    <form method="post" action="<?= e(url('/yonetim/uyeler/abonelik-iptal')) ?>" data-confirm="<?= e('Abonelik HEMEN iptal edilecek. Onaylıyor musunuz?') ?>">
+                    <form method="post" action="<?= e(url('/yonetim/uyeler/abonelik-iptal')) ?>" data-confirm="<?= e(__('Abonelik HEMEN iptal edilecek. Onaylıyor musunuz?')) ?>">
                         <?= csrf_field() ?>
                         <input type="hidden" name="user_id" value="<?= (int) $member['id'] ?>">
                         <input type="hidden" name="subscription_id" value="<?= (int) $subscription['id'] ?>">
                         <input type="hidden" name="immediate" value="1">
-                        <button class="btn btn-outline btn-sm" type="submit" style="color:var(--c-danger);border-color:var(--c-danger)"><?= e('Hemen iptal') ?></button>
+                        <button class="btn btn-outline btn-sm" type="submit" style="color:var(--c-danger);border-color:var(--c-danger)"><?= e(__('Hemen iptal')) ?></button>
                     </form>
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <div class="alert alert--info"><span>ℹ️</span><div><?= e('Bu üyenin aktif bir aboneliği yok. Aşağıdan plan atayabilirsiniz.') ?></div></div>
+            <div class="alert alert--info"><span>ℹ️</span><div><?= e(__('Bu üyenin aktif bir aboneliği yok. Aşağıdan plan atayabilirsiniz.')) ?></div></div>
         <?php endif; ?>
 
-        <h3 class="mt-3" style="font-size:1rem"><?= e('Plan ata / plan değiştir') ?></h3>
+        <h3 class="mt-3" style="font-size:1rem"><?= e(__('Plan ata / plan değiştir')) ?></h3>
         <form method="post" action="<?= e(url('/yonetim/uyeler/plan-ata')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="user_id" value="<?= (int) $member['id'] ?>">
             <div class="field-grid">
                 <div class="field">
-                    <label for="plan-id"><?= e('Plan') ?></label>
+                    <label for="plan-id"><?= e(__('Plan')) ?></label>
                     <select id="plan-id" name="plan_id" required>
                         <?php foreach ($plans as $p): ?>
+                            <?php
+                            $pIntervals = \App\Services\SubscriptionService::intervals($p);
+                            $pParts = [];
+                            if (isset($pIntervals['month'])) {
+                                $pParts[] = 'Aylık ' . number_format($pIntervals['month'], 2, ',', '.');
+                            }
+                            if (isset($pIntervals['year'])) {
+                                $pParts[] = 'Yıllık ' . number_format($pIntervals['year'], 2, ',', '.');
+                            }
+                            if (isset($pIntervals['lifetime'])) {
+                                $pParts[] = 'Ömür boyu ' . number_format($pIntervals['lifetime'], 2, ',', '.');
+                            }
+                            ?>
                             <option value="<?= (int) $p['id'] ?>" <?= (int) ($subscription['plan_id'] ?? 0) === (int) $p['id'] ? 'selected' : '' ?>>
-                                <?= e((string) $p['name']) ?> — <?= e(number_format((float) $p['price'], 2, ',', '.')) ?> <?= e((string) $p['currency']) ?> / <?= e((string) $p['billing_interval']) ?>
+                                <?= e((string) $p['name']) ?> — <?= e(implode(' · ', $pParts) ?: 'ücretsiz') ?> <?= e((string) $p['currency']) ?>
                                 <?= (int) $p['is_active'] === 1 ? '' : '(pasif)' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="field">
-                    <label for="plan-days"><?= e('Süre (gün)') ?> <span class="muted">(<?= e(t('common.optional')) ?>)</span></label>
-                    <input id="plan-days" type="number" name="days" min="0" max="3650" placeholder="<?= e('Boş = plan periyodu') ?>">
+                    <label for="plan-interval"><?= e(__('Dönem')) ?></label>
+                    <select id="plan-interval" name="interval">
+                        <?php foreach (['month' => t('billing.interval_month'), 'year' => t('billing.interval_year'), 'lifetime' => t('billing.interval_lifetime')] as $k => $v): ?>
+                            <option value="<?= e($k) ?>"><?= e($v) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="field">
-                    <label for="plan-trial"><?= e('Deneme süresi (gün)') ?></label>
+                    <label for="plan-days"><?= e(__('Süre (gün)')) ?> <span class="muted">(<?= e(t('common.optional')) ?>)</span></label>
+                    <input id="plan-days" type="number" name="days" min="0" max="3650" placeholder="<?= e(__('Boş = plan dönemi')) ?>">
+                </div>
+                <div class="field">
+                    <label for="plan-trial"><?= e(__('Deneme süresi (gün)')) ?></label>
                     <input id="plan-trial" type="number" name="trial_days" min="0" max="365" value="0">
                 </div>
                 <div class="field">
-                    <label for="plan-method"><?= e('Ödeme yöntemi') ?></label>
+                    <label for="plan-method"><?= e(__('Ödeme yöntemi')) ?></label>
                     <select id="plan-method" name="method">
                         <?php foreach (['manual' => 'Manuel', 'bank_transfer' => 'Havale / EFT', 'cash' => 'Nakit', 'card' => 'Kredi kartı'] as $k => $v): ?>
                             <option value="<?= e($k) ?>"><?= e($v) ?></option>
@@ -229,20 +253,20 @@ foreach ($payments as $p) {
                 </div>
             </div>
             <div class="field">
-                <label for="plan-note"><?= e('Not') ?> <span class="muted">(<?= e(t('common.optional')) ?>)</span></label>
+                <label for="plan-note"><?= e(__('Not')) ?> <span class="muted">(<?= e(t('common.optional')) ?>)</span></label>
                 <input id="plan-note" type="text" name="note" maxlength="250">
             </div>
             <div class="field check">
                 <input id="plan-paid" type="checkbox" name="mark_paid" value="1">
-                <label for="plan-paid"><?= e('Ödemeyi alındı olarak kaydet') ?></label>
+                <label for="plan-paid"><?= e(__('Ödemeyi alındı olarak kaydet')) ?></label>
             </div>
-            <button class="btn btn-accent" type="submit"><?= e('Aboneliği ata') ?></button>
+            <button class="btn btn-accent" type="submit"><?= e(__('Aboneliği ata')) ?></button>
         </form>
 
-        <h3 class="mt-3" style="font-size:1rem"><?= e('Abonelik geçmişi') ?></h3>
+        <h3 class="mt-3" style="font-size:1rem"><?= e(__('Abonelik geçmişi')) ?></h3>
         <div class="table-wrap">
             <table class="data">
-                <thead><tr><th><?= e('Plan') ?></th><th><?= e('Durum') ?></th><th><?= e('Dönem') ?></th><th><?= e('Atayan') ?></th></tr></thead>
+                <thead><tr><th><?= e(__('Plan')) ?></th><th><?= e(__('Durum')) ?></th><th><?= e(__('Dönem')) ?></th><th><?= e(__('Atayan')) ?></th></tr></thead>
                 <tbody>
                 <?php foreach ($subscriptions as $row): ?>
                     <tr>
@@ -252,7 +276,7 @@ foreach ($payments as $p) {
                         <td class="muted"><?= e((string) ($row['assigned_by_name'] ?? '—')) ?></td>
                     </tr>
                 <?php endforeach; ?>
-                <?php if ($subscriptions === []): ?><tr><td colspan="4" class="muted"><?= e('Kayıt yok.') ?></td></tr><?php endif; ?>
+                <?php if ($subscriptions === []): ?><tr><td colspan="4" class="muted"><?= e(__('Kayıt yok.')) ?></td></tr><?php endif; ?>
                 </tbody>
             </table>
         </div>

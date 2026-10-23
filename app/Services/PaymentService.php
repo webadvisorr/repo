@@ -7,6 +7,7 @@ use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Core\Logger;
+use App\Core\Mailer;
 use App\Core\Settings;
 
 /**
@@ -129,15 +130,17 @@ final class PaymentService
         }
 
         if ($kind === 'subscription') {
-            // Abonelikte tutar planın fiyatıdır; müşteriden tutar alınmaz.
+            // Abonelikte tutar planın SEÇİLEN DÖNEM (aylık/yıllık) fiyatıdır.
             $plan = $planId === null ? null : SubscriptionService::plan($planId);
             if ($plan === null || (int) $plan['is_active'] !== 1) {
                 return ['ok' => false, 'error' => 'Seçilen plan bulunamadı.'];
             }
-            if (round((float) $plan['price'], 2) <= 0) {
+            $interval = SubscriptionService::intervalFor($plan, isset($meta['interval']) ? (string) $meta['interval'] : null);
+            $amount = SubscriptionService::priceFor($plan, $interval);
+            if ($amount <= 0) {
                 return ['ok' => false, 'error' => 'Bu plan ücretsiz; ödeme gerekmez.'];
             }
-            $amount = round((float) $plan['price'], 2);
+            $meta['interval'] = $interval;
         } else {
             $amount = round($amount, 2);
             if ($amount <= 0) {
@@ -169,6 +172,7 @@ final class PaymentService
                 'reference'       => $reference,
                 'user_id'         => $userId,
                 'plan_id'         => $kind === 'subscription' ? $planId : null,
+                'billing_interval'=> $kind === 'subscription' ? (string) ($meta['interval'] ?? 'month') : null,
                 'meta_json'       => json_encode($meta, JSON_UNESCAPED_UNICODE),
                 'expires_at'      => date('Y-m-d H:i:s', $now + $ttl * 3600),
                 'notes'           => $kind === 'credit' ? 'Kredi yükleme talebi (havale)' : 'Abonelik ödemesi (havale)',
@@ -181,6 +185,22 @@ final class PaymentService
 
         self::event($paymentId, 'intent_created', ['kind' => $kind, 'amount' => $amount, 'plan_id' => $planId]);
         Audit::log('payment.intent_created', 'payment', $paymentId, ['kind' => $kind, 'amount' => $amount]);
+
+        // Müşteriye panel bildirimi: havale talimatı hazır.
+        InboxService::create([
+            'user_id'    => $userId,
+            'kind'       => 'system',
+            'title'      => $kind === 'subscription' ? 'Paket ödeme talimatınız hazır' : 'Kredi yükleme talimatınız hazır',
+            'body'       => number_format($amount, 2, ',', '.') . ' ' . self::currency() . ' tutarındaki ödeme için havale bilgileri oluşturuldu. Ödeme kodu: ' . $reference,
+            'link_url'   => '/panel/odeme/talep/' . $paymentId,
+            'link_label' => 'Havale bilgilerini gör',
+            'dedupe_key' => 'payment:intent:' . $paymentId,
+        ]);
+        self::notifyAdmins(
+            'Yeni ' . ($kind === 'subscription' ? 'paket' : 'kredi') . ' ödeme talebi',
+            ['Tutar: ' . number_format($amount, 2, ',', '.') . ' ' . self::currency(), 'Ödeme kodu: ' . $reference, 'Durum: havale bekliyor'],
+            '/yonetim/odemeler'
+        );
 
         return ['ok' => true, 'payment_id' => $paymentId, 'reference' => $reference];
     }
@@ -211,6 +231,19 @@ final class PaymentService
 
         self::event($paymentId, 'transfer_declared', $meta['declared'], $userId);
         Audit::log('payment.transfer_declared', 'payment', $paymentId);
+
+        $sender = trim((string) ($declaration['sender'] ?? ''));
+        self::notifyAdmins(
+            'Havale bildirimi — onay bekliyor',
+            array_values(array_filter([
+                'Ödeme kodu: ' . (string) $payment['reference'],
+                'Tutar: ' . number_format((float) $payment['amount'], 2, ',', '.') . ' ' . (string) $payment['currency'],
+                $sender !== '' ? 'Gönderen: ' . $sender : null,
+                !empty($declaration['bank']) ? 'Banka: ' . (string) $declaration['bank'] : null,
+            ])),
+            '/yonetim/odemeler'
+        );
+
         return ['ok' => true];
     }
 
@@ -272,7 +305,10 @@ final class PaymentService
             }
 
             $current = SubscriptionService::current($organizationId);
-            $days = (int) ($plan['billing_interval'] === 'year' ? 365 : ($plan['billing_interval'] === 'lifetime' ? 36500 : 30));
+            $interval = in_array((string) ($payment['billing_interval'] ?? ''), SubscriptionService::INTERVALS, true)
+                ? (string) $payment['billing_interval']
+                : SubscriptionService::intervalFor($plan);
+            $days = SubscriptionService::daysForInterval($interval);
             $periodStart = date('Y-m-d H:i:s');
             $periodEnd = '';
 
@@ -287,6 +323,7 @@ final class PaymentService
             } else {
                 $assign = SubscriptionService::assign($organizationId, $planId, [
                     'mark_paid' => false,
+                    'interval'  => $interval,
                     'provider'  => 'bank_transfer',
                     'note'      => 'Havale ile ödendi — ' . (string) $payment['reference'],
                 ]);
@@ -386,6 +423,35 @@ final class PaymentService
                AND (meta_json IS NULL OR meta_json NOT LIKE '%\"declared\"%')",
             [date('Y-m-d H:i:s')]
         )->rowCount();
+    }
+
+    /** Yöneticilere e-posta ile haber verir (SMTP yoksa sessizce geçer). */
+    private static function notifyAdmins(string $subject, array $lines, string $path): void
+    {
+        try {
+            $admins = Database::select(
+                "SELECT email FROM users WHERE role IN ('admin','editor') AND status = 'active' AND deleted_at IS NULL"
+            );
+            if ($admins === []) {
+                return;
+            }
+            $mailer = new Mailer(['timeout' => 5]);
+            if (!$mailer->isConfigured()) {
+                return;
+            }
+            $brand = (string) Settings::get('brand.title', 'Evrako');
+            $link = url($path);
+            $html = '<p>' . e($subject) . '</p><ul><li>' . implode('</li><li>', array_map('e', $lines)) . '</li></ul>'
+                . '<p><a href="' . e($link) . '">Yönetim panelinde aç</a></p>';
+            foreach ($admins as $admin) {
+                if (!filter_var((string) $admin['email'], FILTER_VALIDATE_EMAIL)) {
+                    continue;
+                }
+                $mailer->send((string) $admin['email'], $brand . ' · ' . $subject, $html, strip_tags(str_replace(['</li>', '</p>'], "\n", $html)));
+            }
+        } catch (\Throwable $e) {
+            Logger::warning('Ödeme yönetici bildirimi gönderilemedi: ' . $e->getMessage());
+        }
     }
 
     /** @param array<string,mixed>|null $payload */

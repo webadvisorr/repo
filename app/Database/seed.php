@@ -49,14 +49,13 @@ final class Seeder
     {
         // key, labels, varsayilan gecerlilik (ay), renk, dosya zorunlu
         $types = [
-            ['inspection', ['tr' => 'Muayene (Emüasyon)', 'en' => 'Vehicle inspection', 'ru' => 'Техосмотр', 'ar' => 'فحص المركبة', 'fa' => 'معاینه فنی', 'el' => 'Τεχνικός έλεγχος'], 12, '#3B82F6', 0],
+            ['inspection', ['tr' => 'Muayene', 'en' => 'Vehicle inspection', 'ru' => 'Техосмотр', 'ar' => 'فحص المركبة', 'fa' => 'معاینه فنی', 'el' => 'Τεχνικός έλεγχος'], 12, '#3B82F6', 0],
             ['insurance',  ['tr' => 'Trafik Sigortası', 'en' => 'Compulsory insurance', 'ru' => 'ОСАГО', 'ar' => 'تأمين إلزامي', 'fa' => 'بیمه اجباری', 'el' => 'Υποχρεωτική ασφάλεια'], 12, '#E5484D', 1],
             ['kasko',      ['tr' => 'Kasko', 'en' => 'Comprehensive insurance', 'ru' => 'КАСКО', 'ar' => 'تأمين شامل', 'fa' => 'بیمه بدنه', 'el' => 'Ασφάλεια οχήματος'], 12, '#8B5CF6', 1],
-            ['road_tax',   ['tr' => 'Yol Vergisi', 'en' => 'Road tax', 'ru' => 'Дорожный налог', 'ar' => 'ضريبة الطريق', 'fa' => 'مالیات راه', 'el' => 'Τέλη κυκλοφορίας'], 12, '#F5A524', 0],
+            ['road_tax',   ['tr' => 'Seyrüsefer', 'en' => 'Road tax', 'ru' => 'Дорожный налог', 'ar' => 'ضريبة الطريق', 'fa' => 'مالیات راه', 'el' => 'Τέλη κυκλοφορίας'], 12, '#F5A524', 0],
             ['license',    ['tr' => 'Ehliyet (sürücü)', 'en' => 'Driving licence', 'ru' => 'Водительские права', 'ar' => 'رخصة القيادة', 'fa' => 'گواهینامه رانندگی', 'el' => 'Άδεια οδήγησης'], 60, '#0EA5E9', 0],
             ['service',    ['tr' => 'Periyodik Bakım', 'en' => 'Scheduled service', 'ru' => 'Плановое ТО', 'ar' => 'صيانة دورية', 'fa' => 'سرویس دوره‌ای', 'el' => 'Περιοδική συντήρηση'], 12, '#14B8A6', 0],
             ['tires',      ['tr' => 'Lastik / Akü', 'en' => 'Tyres / Battery', 'ru' => 'Шины / Аккумулятор', 'ar' => 'إطارات / بطارية', 'fa' => 'لاستیک / باتری', 'el' => 'Ελαστικά / Μπαταρία'], 24, '#64748B', 0],
-            ['permit',     ['tr' => 'İşletme / Kiralama İzni', 'en' => 'Operating permit', 'ru' => 'Разрешение на деятельность', 'ar' => 'تصريح تشغيل', 'fa' => 'مجوز فعالیت', 'el' => 'Άδεια λειτουργίας'], 12, '#EC4899', 1],
         ];
         $sort = 10;
         foreach ($types as [$key, $labels, $months, $color, $requiresFile]) {
@@ -78,33 +77,49 @@ final class Seeder
 
     private static function plans(): void
     {
+        // İki paketli model: 6 ay ücretsiz deneme + tek seferlik Standart Paket.
+        // Ek araç indirimleri App\Services\VehiclePricing içinde tanımlıdır.
         $plans = [
-            ['free',  ['tr' => 'Ücretsiz', 'en' => 'Free', 'ru' => 'Бесплатно', 'ar' => 'مجاني', 'fa' => 'رایگان', 'el' => 'Δωρεάν'], 0, 'month', 1, 1, 2, 'email'],
-            ['family', ['tr' => 'Aile', 'en' => 'Family', 'ru' => 'Семья', 'ar' => 'عائلة', 'fa' => 'خانواده', 'el' => 'Οικογένεια'], 149, 'month', 5, 3, 20, 'email,sms,telegram'],
-            ['pro',   ['tr' => 'Profesyonel', 'en' => 'Pro', 'ru' => 'Профи', 'ar' => 'احترافي', 'fa' => 'حرفه‌ای', 'el' => 'Επαγγελματικό'], 349, 'month', 25, 10, 50, 'email,sms,whatsapp,telegram'],
-            ['fleet', ['tr' => 'Filo / Kurumsal', 'en' => 'Fleet / Business', 'ru' => 'Автопарк', 'ar' => 'أسطول', 'fa' => 'ناوگان', 'el' => 'Στόλος'], 1490, 'month', 250, 50, 100, 'email,sms,whatsapp,telegram'],
+            [
+                'key' => 'trial',
+                'names' => ['tr' => '6 Ay Ücretsiz Deneme', 'en' => '6-Month Free Trial', 'ru' => '6 месяцев бесплатно', 'ar' => 'تجربة مجانية 6 أشهر', 'fa' => '۶ ماه رایگان', 'el' => '6 μήνες δωρεάν'],
+                'description' => 'Tek araçla tüm özellikleri 6 ay boyunca ücretsiz deneyin.',
+                'price' => 0, 'interval' => 'month', 'trialDays' => 180,
+                'maxVehicles' => 1, 'maxUsers' => 1, 'maxDocs' => 200, 'channels' => 'email',
+                'bullets' => ['Tüm evrak türleri ücretsiz', 'Muayene, sigorta, kasko ve seyrüsefer takibi', 'E-posta hatırlatmaları', 'Tek araç'],
+            ],
+            [
+                'key' => 'standard',
+                'names' => ['tr' => 'Standart Paket', 'en' => 'Standard Plan', 'ru' => 'Стандарт', 'ar' => 'الباقة القياسية', 'fa' => 'بسته استاندارد', 'el' => 'Βασικό πακέτο'],
+                'description' => 'Tek seferlik 490 TL. Ek araçlarda %20–%30 indirim.',
+                'price' => 490, 'interval' => 'lifetime', 'trialDays' => 0,
+                'maxVehicles' => 999, 'maxUsers' => 5, 'maxDocs' => 200, 'channels' => 'email',
+                'bullets' => ['İlk araç 490 TL (tek seferlik)', '2. araç %20 indirimli: 392 TL', '3. araç %30 indirimli: 343 TL', '4. ve sonraki araçlar %30 indirimli: 343 TL', 'Tüm evraklar ücretsiz'],
+            ],
         ];
         $sort = 10;
-        foreach ($plans as [$key, $names, $price, $interval, $maxVehicles, $maxUsers, $maxDocs, $channels]) {
-            if (Database::scalar('SELECT id FROM plans WHERE `key` = ?', [$key])) {
+        foreach ($plans as $plan) {
+            if (Database::scalar('SELECT id FROM plans WHERE `key` = ?', [$plan['key']])) {
                 continue;
             }
             Database::insert('plans', [
-                'key'                     => $key,
-                'name'                    => $names['tr'],
-                'description'             => null,
-                'price'                   => $price,
-                'currency'                => 'TRY',
-                'billing_interval'        => $interval,
-                'trial_days'              => $key === 'free' ? 0 : 14,
-                'max_vehicles'            => $maxVehicles,
-                'max_users'               => $maxUsers,
-                'max_documents_per_vehicle' => $maxDocs,
-                'channels'                => $channels,
-                'features_json'           => json_encode(['labels' => $names], JSON_UNESCAPED_UNICODE),
-                'is_active'               => 1,
-                'sort_order'              => $sort,
-                'created_at'              => date('Y-m-d H:i:s'),
+                'key'                       => $plan['key'],
+                'name'                      => $plan['names']['tr'],
+                'description'               => $plan['description'],
+                'price'                     => $plan['price'],
+                'price_month'               => null,
+                'price_year'                => null,
+                'currency'                  => 'TRY',
+                'billing_interval'          => $plan['interval'],
+                'trial_days'                => $plan['trialDays'],
+                'max_vehicles'              => $plan['maxVehicles'],
+                'max_users'                 => $plan['maxUsers'],
+                'max_documents_per_vehicle' => $plan['maxDocs'],
+                'channels'                  => $plan['channels'],
+                'features_json'             => json_encode(['labels' => $plan['names'], 'bullets' => $plan['bullets']], JSON_UNESCAPED_UNICODE),
+                'is_active'                 => 1,
+                'sort_order'                => $sort,
+                'created_at'                => date('Y-m-d H:i:s'),
             ]);
             $sort += 10;
         }

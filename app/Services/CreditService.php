@@ -111,7 +111,7 @@ final class CreditService
         }
 
         try {
-            return Database::transaction(function () use ($organizationId, $amount, $direction, $reason, $note, $reference, $userId): array {
+            $result = Database::transaction(function () use ($organizationId, $amount, $direction, $reason, $note, $reference, $userId): array {
                 // Satır kilidi: eşzamanlı iki işlem bakiyeyi bozamaz.
                 $row = Database::first('SELECT id, credit_balance FROM organizations WHERE id = ? FOR UPDATE', [$organizationId]);
                 if ($row === null) {
@@ -149,6 +149,13 @@ final class CreditService
 
                 return ['ok' => true, 'balance' => $newBalance, 'ledger_id' => $ledgerId];
             });
+
+            // Yükleme ise sahibine panel bildirimi + e-posta gönder (düşümlerde sessiz kal).
+            if (($result['ok'] ?? false) && $direction === 'credit') {
+                AccountNotifier::creditAdded($organizationId, $amount, (float) ($result['balance'] ?? 0), $reason, $note);
+            }
+
+            return $result;
         } catch (\Throwable $e) {
             Logger::error('Kredi hareketi basarisiz: ' . $e->getMessage(), ['org' => $organizationId, 'amount' => $amount]);
             return ['ok' => false, 'error' => 'Kredi işlemi kaydedilemedi.'];

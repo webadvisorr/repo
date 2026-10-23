@@ -5,6 +5,7 @@ namespace App\Controllers\Site;
 
 use App\Controllers\Controller;
 use App\Core\Auth;
+use App\Core\Config;
 use App\Core\Database;
 use App\Core\Flash;
 use App\Core\Mailer;
@@ -13,6 +14,7 @@ use App\Core\Settings;
 use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
+use App\Services\EmailVerificationService;
 
 final class AuthController extends Controller
 {
@@ -35,6 +37,16 @@ final class AuthController extends Controller
         );
 
         $result = Auth::attempt($email, $password, $remember);
+        if (!$result['ok'] && $result['error'] === 'email_unverified' && !empty($result['user_id'])) {
+            // Şifre doğru; kullanıcıyı doğrulama ekranına al ve yeni kod gönder.
+            Auth::login((int) $result['user_id']);
+            $pending = Auth::find((int) $result['user_id']);
+            if ($pending !== null) {
+                EmailVerificationService::issue($pending);
+            }
+            Flash::info(t('auth.email_unverified'));
+            $this->redirect('/dogrula');
+        }
         if (!$result['ok']) {
             Flash::error(t('auth.' . $result['error']));
             Session::put('_old', ['email' => $email]);
@@ -126,39 +138,117 @@ final class AuthController extends Controller
             'created_at'      => $now,
         ]);
 
-        // Deneme/ücretsiz plan ataması
-        $plan = Database::first("SELECT * FROM plans WHERE `key` = 'free' LIMIT 1")
-            ?? Database::first('SELECT * FROM plans WHERE is_active = 1 ORDER BY price ASC LIMIT 1');
+        // Yeni üyeye 6 ay ücretsiz deneme paketi atanır (plans.key = trial).
+        $plan = Database::first("SELECT * FROM plans WHERE `key` = 'trial' LIMIT 1")
+            ?? Database::first('SELECT * FROM plans WHERE is_active = 1 AND price <= 0 ORDER BY sort_order ASC LIMIT 1');
         if ($plan !== null) {
-            $trialDays = (int) Settings::get('site.trial_days', 14);
+            $trialDays = max(1, (int) $plan['trial_days']);
             Database::insert('subscriptions', [
                 'organization_id'      => $orgId,
                 'plan_id'              => (int) $plan['id'],
-                'status'               => $trialDays > 0 ? 'trialing' : 'active',
+                'billing_interval'     => 'month',
+                'status'               => 'trialing',
                 'provider'             => 'manual',
+                'price_at_signup'      => 0,
                 'current_period_start' => $now,
-                'current_period_end'   => date('Y-m-d H:i:s', strtotime('+' . max($trialDays, 30) . ' days')),
-                'trial_ends_at'        => $trialDays > 0 ? date('Y-m-d H:i:s', strtotime("+{$trialDays} days")) : null,
+                'current_period_end'   => date('Y-m-d H:i:s', strtotime("+{$trialDays} days")),
+                'trial_ends_at'        => date('Y-m-d H:i:s', strtotime("+{$trialDays} days")),
                 'created_at'           => $now,
             ]);
         }
 
         Auth::login($userId);
 
-        // E-posta doğrulama bağlantısı
-        $token = Auth::createToken($userId, 'email_verify', 86400 * 3);
-        $link = url('/dogrula?token=' . $token);
-        $mailer = new Mailer();
-        if ($mailer->isConfigured()) {
-            $mailer->send(
-                (string) $data['email'],
-                t('auth.register') . ' — ' . (string) Settings::get('brand.title', 'evrako'),
-                '<p>' . e((string) $data['full_name']) . ', hoş geldiniz!</p><p>Hesabınızı doğrulamak için: <a href="' . e($link) . '">' . e($link) . '</a></p>'
-            );
+        // 6 haneli kod: 2 dakika geçerli, markalı e-posta ile gönderilir.
+        $pending = Auth::find($userId);
+        $sent = $pending === null
+            ? ['ok' => false, 'error' => 'user']
+            : EmailVerificationService::issue($pending);
+
+        // Karşılama: panel bildirimi + markalı e-posta (doğrulama e-postasından ayrı).
+        \App\Services\AccountNotifier::welcome(
+            ['id' => $userId, 'full_name' => (string) $data['full_name'], 'email' => (string) $data['email']],
+            $plan
+        );
+
+        if ($sent['ok']) {
+            Flash::success(t('auth.verify_sent_short'));
+        } else {
+            Flash::error(t('auth.verify_send_failed'));
+        }
+        $this->redirect('/dogrula');
+    }
+
+    /** E-posta doğrulama ekranı (6 haneli kod). */
+    public function showVerify(): string
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            Flash::info(t('auth.verify_login_required'));
+            $this->redirect('/giris');
+        }
+        if (Auth::isEmailVerified()) {
+            $this->redirect('/panel');
         }
 
-        Flash::success(t('common.success'));
-        $this->redirect('/panel');
+        $status = EmailVerificationService::status((int) $user['id']);
+        return $this->view('site/auth_verify', [
+            'title'     => t('auth.verify_title'),
+            'email'     => (string) $user['email'],
+            'status'    => $status,
+            'smtpReady' => (new Mailer())->isConfigured() || (bool) Config::get('mail.dev_log', false),
+        ]);
+    }
+
+    /** Kodu doğrular; başarılıysa hesap aktifleşir. */
+    public function verify(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            $this->redirect('/giris');
+        }
+        if (Auth::isEmailVerified()) {
+            $this->redirect('/panel');
+        }
+
+        $code = (string) $this->request->input('code', '');
+        $result = EmailVerificationService::verify((int) $user['id'], $code);
+        if ($result['ok']) {
+            Flash::success(t('auth.verify_success'));
+            $this->redirect('/panel');
+        }
+
+        Flash::error(t('auth.verify_' . (string) ($result['error'] ?? 'invalid')));
+        $this->redirect('/dogrula');
+    }
+
+    /** Yeni doğrulama kodu gönderir (60 saniye bekleme). */
+    public function resendVerification(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            $this->redirect('/giris');
+        }
+        if (Auth::isEmailVerified()) {
+            $this->redirect('/panel');
+        }
+
+        $userId = (int) $user['id'];
+        if (RateLimiter::tooManyAttempts('verify-resend:' . $userId, 5, 600)) {
+            Flash::error(t('auth.too_many_requests'));
+            $this->redirect('/dogrula');
+        }
+        RateLimiter::hit('verify-resend:' . $userId, 600);
+
+        $result = EmailVerificationService::issue($user);
+        if ($result['ok']) {
+            Flash::success(t('auth.verify_resent'));
+        } elseif (($result['error'] ?? '') === 'cooldown') {
+            Flash::error(t('auth.verify_wait', ['seconds' => (int) ($result['wait'] ?? 0)]));
+        } else {
+            Flash::error(t('auth.verify_send_failed'));
+        }
+        $this->redirect('/dogrula');
     }
 
     public function showForgot(): string

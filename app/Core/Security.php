@@ -38,7 +38,25 @@ final class Security
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }
 
-        $extraScript = (string) Config::get('security.csp_script_extra', '');
+        $extraScript = trim((string) Config::get('security.csp_script_extra', ''));
+        $extraConnect = '';
+
+        // Analitik açıksa ilgili kaynaklara izin ver (CSP `script-src` / `connect-src`).
+        try {
+            if ((string) Settings::get('analytics.enabled', '0') === '1') {
+                $provider = (string) Settings::get('analytics.provider', 'ga4');
+                if ($provider === 'plausible') {
+                    $extraScript .= ' https://plausible.io';
+                    $extraConnect .= ' https://plausible.io';
+                } elseif ($provider !== 'custom') {
+                    $extraScript .= ' https://www.googletagmanager.com';
+                    $extraConnect .= ' https://www.google-analytics.com https://*.google-analytics.com https://stats.g.doubleclick.net';
+                }
+            }
+        } catch (\Throwable) {
+            // Ayarlar okunamıyorsa (kurulum öncesi) ek izin eklenmez.
+        }
+
         $csp = "default-src 'self'; "
             . "base-uri 'self'; "
             . "form-action 'self'; "
@@ -47,8 +65,8 @@ final class Security
             . "img-src 'self' data: https:; "
             . "font-src 'self' data:; "
             . "style-src 'self' 'unsafe-inline'; "
-            . "script-src 'self' 'nonce-{$nonce}'" . ($extraScript !== '' ? ' ' . $extraScript : '') . '; '
-            . "connect-src 'self'";
+            . ("script-src 'self' 'nonce-{$nonce}'" . ($extraScript !== '' ? ' ' . trim($extraScript) : '') . '; ')
+            . ("connect-src 'self'" . ($extraConnect !== '' ? ' ' . trim($extraConnect) : ''));
         header('Content-Security-Policy: ' . $csp);
     }
 

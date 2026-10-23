@@ -186,6 +186,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isLocked) {
                 $log[] = 'Araç türleri, evrak türleri ve planlar eklendi.';
             }
 
+            // Faz 3: premium e-posta şablonlarının 6 dildeki varsayılanları.
+            $templates = App\Services\MailTemplateService::ensureDefaults();
+            $log[] = $templates > 0
+                ? $templates . ' mail şablonu (6 dil) eklendi.'
+                : 'Mail şablonları zaten hazır.';
+            App\Services\ReminderService::ensureSettings();
+
             Settings::set('brand.title', $saved['app_name'], 'brand');
             if ($saved['slogan'] !== '') {
                 Settings::set('brand.slogan', $saved['slogan'], 'brand');

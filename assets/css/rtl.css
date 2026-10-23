@@ -1,0 +1,20 @@
+/* ============================================================
+   evrako — RTL (العربية / فارسی) düzeltmeleri
+   app.css logical özellikleri (inset-inline-*) kullanır; burada
+   yalnızca fiziksel yön gerektiren yerler düzeltilir.
+   ============================================================ */
+[dir="rtl"] .btn::after { transform: translateX(145%); }
+[dir="rtl"] .btn:hover::after,
+[dir="rtl"] .btn:focus-visible::after { transform: translateX(-145%); }
+[dir="rtl"] .nav a::after { transform-origin: right; }
+[dir="rtl"] .lang::after { inset-inline-end: auto; inset-inline-start: 12px; }
+[dir="rtl"] .lang select { padding: 9px 12px 9px 30px; }
+[dir="rtl"] .slide__overlay { background: linear-gradient(270deg, rgba(6,16,32,var(--overlay,.55)), rgba(6,16,32,calc(var(--overlay,.55) * .35))); }
+[dir="rtl"] .list-check li::before { order: 1; }
+[dir="rtl"] .menu-arrow { transform: scaleX(-1); }
+[dir="rtl"] .back-to-top { inset-inline-end: auto; inset-inline-start: 22px; }
+[dir="rtl"] .wa-float { inset-inline-end: auto; inset-inline-start: 22px; }
+[dir="rtl"] .sticky-cta { text-align: right; }
+[dir="rtl"] .cookie-banner { text-align: right; }
+[dir="rtl"] .thanks-check { transform: scaleX(1); }
+[dir="rtl"] .scroll-progress span { transform-origin: right; }

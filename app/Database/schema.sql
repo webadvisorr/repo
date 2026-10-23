@@ -73,6 +73,22 @@ CREATE TABLE IF NOT EXISTS users (
   KEY idx_users_remember (remember_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------- Profil güncelleme talepleri ----------
+CREATE TABLE IF NOT EXISTS profile_change_requests (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  changes_json TEXT NOT NULL,
+  status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+  review_note VARCHAR(250) NULL,
+  reviewed_by INT UNSIGNED NULL,
+  reviewed_at DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_profile_req_status (status, created_at),
+  KEY idx_profile_req_user (user_id, status),
+  CONSTRAINT fk_profile_req_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_profile_req_admin FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------- Oturum / token tabloları ----------
 CREATE TABLE IF NOT EXISTS auth_tokens (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -85,6 +101,19 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
   UNIQUE KEY uniq_token (token_hash),
   KEY idx_token_user (user_id, type),
   CONSTRAINT fk_token_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS email_verification_codes (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  code_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  last_sent_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_evc_user (user_id),
+  KEY idx_evc_expiry (expires_at),
+  CONSTRAINT fk_evc_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS login_attempts (
@@ -139,7 +168,9 @@ CREATE TABLE IF NOT EXISTS plans (
   `key` VARCHAR(40) NOT NULL,
   name VARCHAR(80) NOT NULL,
   description VARCHAR(255) NULL,
-  price DECIMAL(10,2) NOT NULL DEFAULT 0,
+  price DECIMAL(10,2) NOT NULL DEFAULT 0,             -- tek fiyat (ömür boyu plan) / geriye dönük aylık
+  price_month DECIMAL(10,2) NULL,                     -- aylık satış fiyatı
+  price_year DECIMAL(10,2) NULL,                      -- yıllık satış fiyatı
   currency CHAR(3) NOT NULL DEFAULT 'TRY',
   billing_interval ENUM('month','year','lifetime') NOT NULL DEFAULT 'month',
   trial_days SMALLINT UNSIGNED NOT NULL DEFAULT 0,
@@ -158,6 +189,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   organization_id INT UNSIGNED NOT NULL,
   plan_id INT UNSIGNED NOT NULL,
+  billing_interval ENUM('month','year','lifetime') NOT NULL DEFAULT 'month',
   status ENUM('trialing','active','past_due','cancelled','expired') NOT NULL DEFAULT 'trialing',
   provider VARCHAR(30) NOT NULL DEFAULT 'manual',    -- manual, iyzico, paytr, bank_transfer
   provider_ref VARCHAR(120) NULL,                    -- abonelik/kart token referansı
@@ -190,6 +222,7 @@ CREATE TABLE IF NOT EXISTS payments (
   reference VARCHAR(40) NULL,                            -- musteriye gosterilen odeme kodu (HV-2026-0001)
   user_id INT UNSIGNED NULL,                             -- odemeyi baslatan kullanici
   plan_id INT UNSIGNED NULL,                             -- abonelik satin aliminda plan
+  billing_interval ENUM('month','year','lifetime') NULL, -- secilen odeme donemi
   gateway_token VARCHAR(191) NULL,                       -- odeme sayfasi saglayici tokeni (ileride iyzico/paytr)
   gateway_url VARCHAR(500) NULL,                         -- odeme sayfasi adresi (ileride)
   meta_json TEXT NULL,                                   -- havale bildirimi vb. ek alanlar
@@ -340,6 +373,48 @@ CREATE TABLE IF NOT EXISTS notifications (
   KEY idx_notif_user (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------- Site içi bildirim merkezi ----------
+CREATE TABLE IF NOT EXISTS inbox_broadcasts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(160) NOT NULL,
+  body TEXT NULL,
+  image_media_id INT UNSIGNED NULL,
+  image_path VARCHAR(255) NULL,
+  link_url VARCHAR(500) NULL,
+  link_label VARCHAR(80) NULL,
+  audience_json TEXT NULL,                         -- {"plan_key":"","org_id":0,"user_id":0}
+  recipient_count INT UNSIGNED NOT NULL DEFAULT 0,
+  created_by INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL,
+  sent_at DATETIME NULL,
+  KEY idx_inbox_broadcast_sent (sent_at),
+  CONSTRAINT fk_inbox_broadcast_media FOREIGN KEY (image_media_id) REFERENCES media(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_notifications (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  organization_id INT UNSIGNED NULL,
+  kind ENUM('reminder','announcement','support','message','system') NOT NULL DEFAULT 'announcement',
+  broadcast_id INT UNSIGNED NULL,
+  vehicle_id INT UNSIGNED NULL,
+  document_id INT UNSIGNED NULL,
+  title VARCHAR(160) NOT NULL,
+  body TEXT NULL,
+  image_path VARCHAR(255) NULL,
+  link_url VARCHAR(500) NULL,
+  link_label VARCHAR(80) NULL,
+  dedupe_key VARCHAR(160) NULL,
+  read_at DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_user_notif_dedupe (dedupe_key),
+  KEY idx_user_notif_user (user_id, created_at),
+  KEY idx_user_notif_unread (user_id, read_at),
+  KEY idx_user_notif_broadcast (broadcast_id),
+  CONSTRAINT fk_user_notif_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_user_notif_broadcast FOREIGN KEY (broadcast_id) REFERENCES inbox_broadcasts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------- Mail şablonları ----------
 CREATE TABLE IF NOT EXISTS mail_templates (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -465,6 +540,7 @@ CREATE TABLE IF NOT EXISTS posts (
 -- ---------- İletişim / geri bildirim ----------
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
   name VARCHAR(160) NOT NULL,
   email VARCHAR(190) NOT NULL,
   phone VARCHAR(32) NULL,
@@ -472,7 +548,68 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   message TEXT NOT NULL,
   ip VARCHAR(45) NULL,
   is_read TINYINT(1) NOT NULL DEFAULT 0,
-  created_at DATETIME NOT NULL
+  created_at DATETIME NOT NULL,
+  KEY idx_contact_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- İletişim mesajı yanıtları (müşteri ↔ yönetim)
+CREATE TABLE IF NOT EXISTS contact_replies (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  message_id INT UNSIGNED NOT NULL,
+  sender ENUM('customer','admin') NOT NULL,
+  user_id INT UNSIGNED NULL,
+  body TEXT NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_contact_reply_message (message_id, created_at),
+  CONSTRAINT fk_contact_reply_message FOREIGN KEY (message_id) REFERENCES contact_messages(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Destek talepleri ----------
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ticket_no VARCHAR(24) NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  organization_id INT UNSIGNED NULL,
+  subject VARCHAR(200) NOT NULL,
+  category ENUM('technical','billing','documents','account','other') NOT NULL DEFAULT 'other',
+  priority ENUM('low','normal','high') NOT NULL DEFAULT 'normal',
+  status ENUM('open','answered','closed') NOT NULL DEFAULT 'open',
+  last_reply_at DATETIME NULL,
+  closed_at DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uniq_ticket_no (ticket_no),
+  KEY idx_ticket_user (user_id, created_at),
+  KEY idx_ticket_status (status, updated_at),
+  CONSTRAINT fk_ticket_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS support_ticket_messages (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ticket_id INT UNSIGNED NOT NULL,
+  sender ENUM('customer','admin') NOT NULL,
+  user_id INT UNSIGNED NULL,
+  body TEXT NOT NULL,
+  read_by_admin_at DATETIME NULL,
+  read_by_customer_at DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_ticket_message (ticket_id, created_at),
+  CONSTRAINT fk_ticket_message_ticket FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Canlı ziyaretçi sayacı ----------
+CREATE TABLE IF NOT EXISTS visitor_sessions (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  visitor_key CHAR(40) NOT NULL,
+  user_id INT UNSIGNED NULL,
+  ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  path VARCHAR(255) NULL,
+  first_seen DATETIME NOT NULL,
+  last_seen DATETIME NOT NULL,
+  UNIQUE KEY uniq_visitor_key (visitor_key),
+  KEY idx_visitor_last (last_seen),
+  KEY idx_visitor_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Kredi bakiyesi ve hareket defteri ----------

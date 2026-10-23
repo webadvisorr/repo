@@ -16,3 +16,7 @@
 *.bak
 .DS_Store
 Thumbs.db
+
+# Yerel paketler ve inceleme çıktıları (depoya girmez)
+/*.zip
+/artifacts/

@@ -62,6 +62,13 @@ final class Auth
             return ['ok' => false, 'error' => $failed >= self::MAX_LOGIN_ATTEMPTS ? 'account_locked' : 'invalid_credentials'];
         }
 
+        // Yeni müşteri hesapları e-posta kodunu doğrulamadan panele giremez.
+        // Yönetici/editör ve davetle oluşturulmuş hesaplar etkilenmez.
+        if ((string) $user['role'] === 'customer' && ($user['email_verified_at'] ?? null) === null) {
+            self::recordAttempt($email, true);
+            return ['ok' => false, 'error' => 'email_unverified', 'user_id' => (int) $user['id']];
+        }
+
         // Hash algoritmasi/eski maliyet degistiyse sessizce yeniden hashle.
         if (password_needs_rehash((string) $user['password_hash'], PASSWORD_DEFAULT)) {
             Database::update('users', ['password_hash' => password_hash($password, PASSWORD_DEFAULT)], 'id = :id', ['id' => (int) $user['id']]);
@@ -178,6 +185,19 @@ final class Auth
     {
         $user = self::user();
         return $user !== null && in_array((string) $user['role'], ['admin', 'editor'], true);
+    }
+
+    /** Müşteri hesabı e-posta kodunu doğruladı mı? (yönetici/editör her zaman true) */
+    public static function isEmailVerified(): bool
+    {
+        $user = self::user();
+        if ($user === null) {
+            return false;
+        }
+        if ((string) $user['role'] !== 'customer') {
+            return true;
+        }
+        return ($user['email_verified_at'] ?? null) !== null;
     }
 
     public static function isSuperAdmin(): bool

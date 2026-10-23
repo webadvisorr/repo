@@ -8,5 +8,5 @@ foreach ($messages as $message):
         default   => 'info',
     };
 ?>
-    <div class="alert alert--<?= e($type) ?>" role="status"><?= e((string) $message['message']) ?></div>
+    <div class="alert alert--<?= e($type) ?>" role="status"><?= e(__((string) $message['message'])) ?></div>
 <?php endforeach; ?>

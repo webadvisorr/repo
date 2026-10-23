@@ -1,6 +1,6 @@
 <div class="card">
     <h2 class="mb-2"><?= e(t('auth.reset_title')) ?></h2>
-    <p class="muted"><?= e('E-posta adresinizi girin; şifre sıfırlama bağlantısı gönderelim.') ?></p>
+    <p class="muted"><?= e(__('E-posta adresinizi girin; şifre sıfırlama bağlantısı gönderelim.')) ?></p>
     <form method="post" action="<?= e(url('/sifremi-unuttum')) ?>">
         <?= csrf_field() ?>
         <div class="field">

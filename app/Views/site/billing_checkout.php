@@ -1,8 +1,10 @@
 <?php
 use App\Core\Auth;
+use App\Services\SubscriptionService;
 $user = Auth::user();
 $orgId = $orgId ?? null;
 ?>
+
 <section class="section section--tight">
     <div class="container">
         <div class="row row--between mb-3">
@@ -30,6 +32,13 @@ $orgId = $orgId ?? null;
                 <div class="stat__label"><?= e(t('billing.paid_total')) ?></div>
             </div>
         </div>
+
+        <?php if (!empty($focusCredit)): ?>
+            <div class="card mb-3" style="border-color:var(--c-danger)">
+                <p class="mb-0"><?= e(t('billing.credit_shortfall_hint')) ?></p>
+                <a class="btn btn-accent btn-sm mt-2" href="#kredi"><?= e(t('billing.buy_credit')) ?> →</a>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($pending)): ?>
             <div class="card mb-3">
@@ -82,13 +91,13 @@ $orgId = $orgId ?? null;
                     <?php endforeach; ?>
                 </div>
                 <?php if (!empty($bankNote)): ?>
-                    <p class="hint mt-2"><?= e((string) $bankNote) ?></p>
+                    <p class="hint mt-2"><?= e(__((string) $bankNote)) ?></p>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
 
         <div class="grid grid-2 mb-3">
-            <div class="card">
+            <div class="card" id="kredi">
                 <h2 style="font-size:1.1rem">💰 <?= e(t('billing.buy_credit')) ?></h2>
                 <p class="muted" style="font-size:13.5px"><?= e(t('billing.buy_credit_hint', ['min' => number_format((float) $minTopup, 2, ',', '.'), 'currency' => (string) $currency])) ?></p>
                 <form method="post" action="<?= e(url('/panel/odeme/kredi')) ?>" class="mt-2">
@@ -120,38 +129,91 @@ $orgId = $orgId ?? null;
                 </script>
             </div>
 
-            <div class="card">
+            <div class="card" id="paketler">
                 <h2 style="font-size:1.1rem">💳 <?= e(t('billing.buy_subscription')) ?></h2>
+                <?php
+                $trialPlan = null;
+                $standardPlan = null;
+                foreach (($plans ?? []) as $row) {
+                    if ((string) $row['key'] === 'trial') { $trialPlan = $row; }
+                    if ((string) $row['key'] === 'standard') { $standardPlan = $row; }
+                }
+                $activeTrial = !empty($current) && (string) $current['plan_key'] === 'trial'
+                    && in_array((string) $current['status'], ['trialing', 'active'], true);
+                $money = static fn (float $value): string => number_format($value, 2, ',', '.');
+                $standardPrice = $standardPlan !== null ? SubscriptionService::priceFor($standardPlan) : 0.0;
+                $trialDays = $trialPlan !== null ? max(1, (int) ($trialPlan['trial_days'] ?? 180)) : 180;
+                $trialMonths = max(1, (int) round($trialDays / 30));
+                ?>
                 <?php if (!empty($current)): ?>
-                    <p class="muted" style="font-size:13.5px">
-                        <?= e(t('billing.current_plan', ['plan' => (string) $current['plan_name'], 'date' => format_date((string) $current['current_period_end'])])) ?>
-                    </p>
+                    <div class="alert alert--info" style="align-items:flex-start">
+                        <span aria-hidden="true">ℹ️</span>
+                        <div>
+                            <strong><?= e(t('billing.current_plan', ['plan' => (string) $current['plan_name'], 'date' => format_date((string) $current['current_period_end'])])) ?></strong>
+                            <div style="font-size:12.5px"><?= e(__('Aboneliğinizi yükseltmek için aşağıdaki paketlerden birini seçin.')) ?></div>
+                        </div>
+                    </div>
                 <?php endif; ?>
-                <div class="table-wrap">
-                    <table class="data">
-                        <thead><tr><th><?= e(t('billing.plan')) ?></th><th><?= e(t('billing.price')) ?></th><th><?= e(t('billing.limit')) ?></th><th></th></tr></thead>
-                        <tbody>
-                        <?php foreach (($plans ?? []) as $plan): ?>
-                            <tr>
-                                <td><strong><?= e((string) $plan['name']) ?></strong></td>
-                                <td class="mono"><?= e(number_format((float) $plan['price'], 2, ',', '.')) ?> <?= e((string) $plan['currency']) ?></td>
-                                <td class="muted"><?= e((int) $plan['max_vehicles'] . ' ' . t('billing.vehicle_unit')) ?></td>
-                                <td>
-                                    <?php if ((float) $plan['price'] > 0): ?>
-                                        <form method="post" action="<?= e(url('/panel/odeme/abonelik')) ?>">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="plan_id" value="<?= (int) $plan['id'] ?>">
-                                            <button class="btn btn-primary btn-sm" type="submit"><?= e(t('billing.select_plan')) ?></button>
-                                        </form>
-                                    <?php else: ?>
-                                        <span class="muted" style="font-size:13px"><?= e(t('billing.free_plan')) ?></span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
+
+                <p class="muted" style="font-size:13.5px;margin-top:0">
+                    <?= e(__('İki basit paket: 6 ay ücretsiz deneme veya tek seferlik Standart Paket. Evrak eklemek her zaman ücretsizdir.')) ?>
+                    <?= e(__('Paketi seçtikten sonra havale bilgileri ve ödeme kodunuz gösterilir; bildiriminiz yönetime iletilir.')) ?>
+                </p>
+
+                <div class="grid grid-2" style="gap:12px;align-items:stretch">
+                    <div class="card plan" style="height:100%">
+                        <span class="badge badge--info"><?= e(__('1. Paket')) ?></span>
+                        <h3 class="mb-0" style="margin-top:8px"><?= e($trialPlan !== null ? (string) $trialPlan['name'] : __('6 Ay Ücretsiz Deneme')) ?></h3>
+                        <div class="plan__price"><?= e('0') ?> <small>/ <?= e($trialMonths . ' ay') ?></small></div>
+                        <p class="muted mb-0" style="font-size:13.5px"><?= e(__('Tek araçla, hiçbir ödeme yapmadan tüm sistemi 6 ay boyunca deneyin.')) ?></p>
+                        <ul style="font-size:13px">
+                            <li><?= e(__('6 ay boyunca tam erişim, ücret yok')) ?></li>
+                            <li><?= e(__('Tek araç kaydı')) ?></li>
+                            <li><?= e(__('Tüm evraklar ücretsiz, e-posta hatırlatmaları')) ?></li>
+                            <li><?= e(__('Deneme sonunda Standart Pakete geçebilirsiniz')) ?></li>
+                        </ul>
+                        <?php if ($activeTrial): ?>
+                            <span class="badge badge--ok"><?= e(__('Aktif deneme · bitiş ') . format_date((string) $current['current_period_end'])) ?></span>
+                        <?php elseif (($trialUsed ?? 0) > 0 || !empty($isStandard)): ?>
+                            <button class="btn btn-outline btn-block mt-2" type="button" disabled><?= e(__('Deneme daha önce kullanıldı')) ?></button>
+                        <?php else: ?>
+                            <form method="post" action="<?= e(url('/panel/odeme/deneme')) ?>" class="mt-2">
+                                <?= csrf_field() ?>
+                                <button class="btn btn-outline btn-block" type="submit"><?= e(__('Ücretsiz denemeyi başlat')) ?></button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="card plan plan--featured" style="height:100%">
+                        <span class="badge badge--ok"><?= e(__('2. Paket · En çok tercih edilen')) ?></span>
+                        <h3 class="mb-0" style="margin-top:8px"><?= e($standardPlan !== null ? (string) $standardPlan['name'] : 'Standart Paket') ?></h3>
+                        <div class="plan__price"><?= e($money($standardPrice)) ?> <small>/ <?= e(__('tek seferlik')) ?></small></div>
+                        <p class="muted mb-0" style="font-size:13.5px"><?= e(__('İlk araç için tek seferlik ödeme. Ek araçlarda kademeli indirim uygulanır.')) ?></p>
+                        <ul style="font-size:13px">
+                            <li><?= e(__('İlk araç: ') . $money($standardPrice)) ?></li>
+                            <li><?= e(__('2. araç %20 indirimli: ') . $money($standardPrice * 0.8)) ?></li>
+                            <li><?= e(__('3. araç %30 indirimli: ') . $money($standardPrice * 0.7)) ?></li>
+                            <li><?= e(__('4. araç ve sonrası %30 indirimli: ') . $money($standardPrice * 0.7)) ?></li>
+                            <li><?= e(__('Tüm evrak türleri ücretsiz, süresiz kullanım')) ?></li>
+                        </ul>
+                        <?php if (!empty($isStandard)): ?>
+                            <span class="badge badge--ok"><?= e(__('Aktif paketiniz · bitiş ') . format_date((string) $current['current_period_end'])) ?></span>
+                        <?php elseif ($standardPlan !== null): ?>
+                            <form method="post" action="<?= e(url('/panel/odeme/abonelik')) ?>" class="mt-2">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="plan_id" value="<?= (int) $standardPlan['id'] ?>">
+                                <button class="btn btn-accent btn-block" type="submit" data-loading-text="<?= e(t('billing.paying')) ?>">
+                                    <?= e(__('Paketi seç ve havale bilgilerini al')) ?>
+                                </button>
+                            </form>
+                        <?php else: ?>
+                            <span class="muted" style="font-size:13px"><?= e(__('Paket bilgisi yüklenemedi. Lütfen bizimle iletişime geçin.')) ?></span>
+                        <?php endif; ?>
+                    </div>
                 </div>
+
+                <p class="hint mt-2 mb-0"><?= e(__('Ek araç ücretleri kredi bakiyenizden düşülür. Evraklar için ayrıca ücret alınmaz.')) ?>
+                    <?= e(t('billing.credit_hint', ['balance' => number_format((float) ($credit ?? 0), 2, ',', '.'), 'currency' => (string) ($currency ?? '')])) ?></p>
             </div>
         </div>
     </div>

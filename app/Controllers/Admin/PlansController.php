@@ -34,9 +34,15 @@ final class PlansController extends Controller
             'plans' => $plans,
             'totals' => [
                 'active_subs' => (int) Database::scalar("SELECT COUNT(*) FROM subscriptions WHERE status IN ('active','trialing')"),
+                // MRR: yıllık abonelikler 12'ye bölünerek aylık gelire çevrilir.
                 'mrr'         => round((float) Database::scalar(
-                    "SELECT COALESCE(SUM(p.price),0) FROM subscriptions s JOIN plans p ON p.id = s.plan_id
-                     WHERE s.status = 'active' AND p.billing_interval = 'month'"
+                    "SELECT COALESCE(SUM(CASE
+                                WHEN s.billing_interval = 'year'
+                                    THEN COALESCE(NULLIF(s.price_at_signup,0), p.price_year, p.price * 12) / 12
+                                ELSE COALESCE(NULLIF(s.price_at_signup,0), p.price_month, p.price)
+                             END), 0)
+                     FROM subscriptions s JOIN plans p ON p.id = s.plan_id
+                     WHERE s.status = 'active'"
                 ), 2),
                 'revenue'     => round((float) Database::scalar("SELECT COALESCE(SUM(amount),0) FROM payments WHERE status = 'paid'"), 2),
             ],
@@ -55,7 +61,6 @@ final class PlansController extends Controller
         $data = $this->validate(
             [
                 'name'          => $this->request->string('name'),
-                'price'         => $this->request->string('price'),
                 'currency'      => $this->request->string('currency'),
                 'interval'      => $this->request->string('billing_interval'),
                 'max_vehicles'  => $this->request->string('max_vehicles'),
@@ -65,7 +70,6 @@ final class PlansController extends Controller
             ],
             [
                 'name'          => 'required|min:2|max:80',
-                'price'         => 'required|numeric',
                 'currency'      => 'required|in:TRY,EUR,USD,GBP',
                 'interval'      => 'required|in:month,year,lifetime',
                 'max_vehicles'  => 'required|integer',
@@ -73,7 +77,7 @@ final class PlansController extends Controller
                 'max_documents' => 'required|integer',
                 'trial_days'    => 'required|integer',
             ],
-            ['name' => 'Plan adı', 'price' => 'Fiyat', 'currency' => 'Para birimi', 'interval' => 'Periyot'],
+            ['name' => 'Plan adı', 'currency' => 'Para birimi', 'interval' => 'Periyot'],
             '/yonetim/planlar'
         );
 
@@ -82,9 +86,13 @@ final class PlansController extends Controller
             ['email', 'sms', 'whatsapp', 'telegram', 'push']
         ));
 
+        $prices = $this->prices((string) $data['interval']);
+
         Database::update('plans', [
             'name'                      => (string) $data['name'],
-            'price'                     => max(0, round((float) str_replace(',', '.', (string) $data['price']), 2)),
+            'price'                     => $prices['price'],
+            'price_month'               => $prices['price_month'],
+            'price_year'                => $prices['price_year'],
             'currency'                  => (string) $data['currency'],
             'billing_interval'          => (string) $data['interval'],
             'max_vehicles'              => max(1, min(100000, (int) $data['max_vehicles'])),
@@ -114,13 +122,20 @@ final class PlansController extends Controller
             $this->redirect('/yonetim/planlar');
         }
 
+        $interval = in_array($this->request->string('billing_interval', 'month'), ['month', 'year', 'lifetime'], true)
+            ? $this->request->string('billing_interval', 'month')
+            : 'month';
+        $prices = $this->prices($interval);
+
         $planId = Database::insert('plans', [
             'key'                     => $key,
             'name'                    => mb_substr($this->request->string('name') ?: $key, 0, 80),
             'description'             => null,
-            'price'                   => max(0, round((float) str_replace(',', '.', $this->request->string('price', '0')), 2)),
+            'price'                   => $prices['price'],
+            'price_month'             => $prices['price_month'],
+            'price_year'              => $prices['price_year'],
             'currency'                => in_array($this->request->string('currency', 'TRY'), ['TRY', 'EUR', 'USD', 'GBP'], true) ? $this->request->string('currency', 'TRY') : 'TRY',
-            'billing_interval'        => in_array($this->request->string('billing_interval', 'month'), ['month', 'year', 'lifetime'], true) ? $this->request->string('billing_interval', 'month') : 'month',
+            'billing_interval'        => $interval,
             'trial_days'              => max(0, min(365, $this->request->int('trial_days', 14))),
             'max_vehicles'            => max(1, $this->request->int('max_vehicles', 1)),
             'max_users'               => max(1, $this->request->int('max_users', 1)),
@@ -134,6 +149,41 @@ final class PlansController extends Controller
         Audit::log('plan.create', 'plan', $planId, ['key' => $key]);
         $this->flashSuccess('Plan eklendi.');
         $this->redirect('/yonetim/planlar');
+    }
+
+    /**
+     * Formdaki fiyat alanlarını plan modeline çevirir.
+     * Ömür boyu planlarda tek `price`; aylık/yıllık planlarda price_month + price_year.
+     * Yıllık fiyat boş bırakılırsa 12 aylık tutar önerilir (panelden indirimle değiştirilebilir).
+     *
+     * @return array{price:float,price_month:?float,price_year:?float}
+     */
+    private function prices(string $interval): array
+    {
+        $read = function (string $field): float {
+            return round((float) str_replace(',', '.', (string) $this->request->string($field, '0')), 2);
+        };
+
+        $single = max(0.0, $read('price'));
+        $month = max(0.0, $read('price_month'));
+        $year = max(0.0, $read('price_year'));
+
+        if ($interval === 'lifetime') {
+            return ['price' => max($single, $month), 'price_month' => null, 'price_year' => null];
+        }
+
+        if ($month <= 0) {
+            $month = $single;
+        }
+        if ($year <= 0 && $month > 0) {
+            $year = round($month * 12, 2);
+        }
+
+        return [
+            'price'       => $month,
+            'price_month' => $month > 0 ? $month : null,
+            'price_year'  => $year > 0 ? $year : null,
+        ];
     }
 
     /** Planı sil (aktif abone varsa engellenir). */

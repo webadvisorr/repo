@@ -19,14 +19,28 @@ final class View
         if ($layout === null) {
             return $content;
         }
-        return self::renderPartial($layout, array_merge($data, ['content' => $content]));
+        $html = self::renderPartial($layout, array_merge($data, ['content' => $content]));
+        // Yönetim panelinde hâlâ sabit metin kullanan ekranlar için son çare çeviri.
+        if ($layout === 'layouts/admin') {
+            $html = Translator::translateDocument($html);
+        }
+        return $html;
     }
 
-    public static function renderPartial(string $template, array $data = []): string
+    /**
+     * Sablonu verilen verilerle isler.
+     *
+     * DİKKAT: Veri anahtarları bu metodun yerel değişken adlarıyla çakışmamalıdır;
+     * `extract(..., EXTR_SKIP)` aynı ada sahip veriyi sessizce atlar. Bu yüzden
+     * yerel değişkenler `$templatePath`, `$path`, `$data` dışında ad kullanmaz.
+     *
+     * @param array<string,mixed> $data
+     */
+    public static function renderPartial(string $templatePath, array $data = []): string
     {
-        $path = self::resolve($template);
+        $path = self::resolve($templatePath);
         if ($path === null) {
-            Logger::error('Sablon bulunamadi: ' . $template);
+            Logger::error('Sablon bulunamadi: ' . $templatePath);
             return '';
         }
         $data = array_merge(self::$shared, $data);
